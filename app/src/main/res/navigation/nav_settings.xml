@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_settings"
+    app:startDestination="@id/settingsFragment">
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.appincreible.musicplayer.ui.settings.SettingsFragment"
+        android:label="Configuración" />
+
+    <fragment
+        android:id="@+id/settingsDetailFragment"
+        android:name="com.appincreible.musicplayer.ui.settings.SettingsDetailFragment"
+        android:label="Configuración">
+        <argument
+            android:name="settings_category"
+            app:argType="string"
+            android:defaultValue="appearance" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nowPlayingFragment"
+        android:name="com.appincreible.musicplayer.ui.player.NowPlayingFragment"
+        android:label="Reproduciendo" />
+</navigation>

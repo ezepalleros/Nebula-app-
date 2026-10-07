@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_music"
+    app:startDestination="@id/musicFragment">
+    <fragment android:id="@+id/musicFragment" android:name="com.appincreible.musicplayer.ui.music.MusicFragment" android:label="Música" />
+    <fragment android:id="@+id/libraryFolderFragment" android:name="com.appincreible.musicplayer.ui.music.LibraryFolderFragment" android:label="Carpetas" />
+    <fragment android:id="@+id/collectionFragment" android:name="com.appincreible.musicplayer.ui.music.CollectionFragment" android:label="Colección" />
+    <fragment android:id="@+id/nowPlayingFragment" android:name="com.appincreible.musicplayer.ui.player.NowPlayingFragment" android:label="Reproduciendo" />
+</navigation>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/musicFragment" android:icon="@drawable/ic_music" android:title="@string/music" />
+    <item android:id="@+id/radioFragment" android:icon="@drawable/ic_radio" android:title="@string/radio" />
+    <item android:id="@+id/gamesFragment" android:icon="@drawable/ic_gamepad" android:title="@string/games" />
+    <item android:id="@+id/settingsFragment" android:icon="@drawable/ic_settings" android:title="@string/settings" />
+</menu>

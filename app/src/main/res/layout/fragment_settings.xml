@@ -1,0 +1,680 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@android:color/transparent" android:clipToPadding="false">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingBottom="34dp">
+
+        <LinearLayout android:id="@+id/settingsHeader" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="12dp" android:paddingTop="16dp" android:paddingEnd="20dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+        <ImageButton android:id="@+id/settingsBackButton" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="Volver" android:padding="12dp" android:src="@drawable/ic_arrow_back" app:tint="?attr/colorOnSurface"/>
+        <TextView android:id="@+id/settingsHeaderTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:layout_weight="1" android:text="Configuración" android:textAppearance="?attr/textAppearanceHeadlineMedium" android:textStyle="bold"/>
+    </LinearLayout>
+    <TextView android:id="@+id/settingsHeaderSubtitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="56dp" android:layout_marginTop="2dp" android:text="Ajustes" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+</LinearLayout><com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="258dp" android:layout_marginHorizontal="20dp" android:layout_marginTop="20dp" app:cardCornerRadius="28dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurfaceContainerLow" android:id="@+id/playerPreviewCard">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <android.webkit.WebView android:id="@+id/playerPreviewWeb" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_margin="8dp"/>
+    </FrameLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="64dp" android:gravity="center_vertical" android:orientation="vertical" android:paddingHorizontal="18dp">
+        <TextView android:id="@+id/previewStyleTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Clásico" android:textAppearance="?attr/textAppearanceTitleMedium" android:textStyle="bold"/>
+        <TextView android:id="@+id/previewStyleSubtitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Objeto 3D · suave" android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+    </LinearLayout>
+</LinearLayout></com.google.android.material.card.MaterialCardView>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="26dp" android:paddingHorizontal="20dp" android:text="REPRODUCTOR" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold" android:id="@+id/playerSectionLabel"/>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/styleRow" android:layout_width="match_parent" android:layout_height="84dp" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="16dp">
+                <android.webkit.WebView android:id="@+id/styleMiniPreviewWeb" android:layout_width="64dp" android:layout_height="64dp"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Estilo del reproductor" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/styleValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Clásico" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/equalizerSkinBackgroundRow" android:layout_width="match_parent" android:layout_height="76dp" android:layout_marginHorizontal="14dp" android:visibility="gone" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <View android:id="@+id/equalizerSkinBackgroundPreview" android:layout_width="38dp" android:layout_height="38dp" android:background="@drawable/bg_color_preview"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="22dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:id="@+id/equalizerSkinBackgroundLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Color de fondo" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/equalizerSkinBackgroundValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="#000000" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/equalizerSkinBarsRow" android:layout_width="match_parent" android:layout_height="76dp" android:layout_marginHorizontal="14dp" android:visibility="gone" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <View android:id="@+id/equalizerSkinBarsPreview" android:layout_width="38dp" android:layout_height="38dp" android:background="@drawable/bg_color_preview"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="22dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:id="@+id/equalizerSkinBarsLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Color de las barras" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/equalizerSkinBarsValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="#8B5CF6" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/fftIntensityCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:visibility="gone" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="20dp" android:paddingTop="14dp" android:paddingEnd="20dp" android:paddingBottom="12dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Intensidad del espectro" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/fftIntensityValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="100%" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorPrimary"/>
+                </LinearLayout>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Cuánto se expanden las barras o puntas con la música." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <SeekBar android:id="@+id/fftIntensitySeek" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:max="150"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/accentRow" android:layout_width="match_parent" android:layout_height="76dp" android:layout_marginHorizontal="14dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <View android:id="@+id/accentPreview" android:layout_width="38dp" android:layout_height="38dp" android:background="@drawable/bg_color_preview"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="22dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Color de acento" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/accentValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Violeta" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/animationRow" android:layout_width="match_parent" android:layout_height="76dp" android:layout_marginHorizontal="14dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <TextView android:layout_width="38dp" android:layout_height="38dp" android:gravity="center" android:text="✦" android:textSize="24sp"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="22dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Animaciones" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/animationValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Suave" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/backgroundRow" android:layout_width="match_parent" android:layout_height="76dp" android:layout_marginHorizontal="14dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <TextView android:layout_width="38dp" android:layout_height="38dp" android:gravity="center" android:text="◌" android:textSize="25sp"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="22dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fondo del reproductor" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/backgroundValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Aurora" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/playerBackgroundColorsRow"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/music_row_height"
+            android:layout_marginHorizontal="@dimen/space_12"
+            android:layout_marginTop="@dimen/space_4"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="@dimen/radius_16"
+            app:cardElevation="@dimen/elevation_flat">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="@dimen/space_20">
+
+                <View
+                    android:id="@+id/playerBackgroundColorPreview"
+                    android:layout_width="@dimen/music_action_size"
+                    android:layout_height="@dimen/music_action_size"
+                    android:background="@drawable/bg_color_preview" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_16"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Colores del fondo"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <TextView
+                        android:id="@+id/playerBackgroundColorsValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:text="Color de acento"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/typographyRow" android:layout_width="match_parent" android:layout_height="76dp" android:layout_marginHorizontal="14dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <TextView android:layout_width="38dp" android:layout_height="38dp" android:gravity="center" android:text="Aa" android:textSize="20sp" android:textStyle="bold"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="22dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tipografía" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/typographyValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Moderna" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/playerVisibilityLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:paddingHorizontal="20dp"
+            android:text="ELEMENTOS VISIBLES"
+            android:textAppearance="?attr/textAppearanceLabelLarge"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/playerAppearancePreviewCard"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginHorizontal="14dp"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="22dp"
+            app:cardElevation="0dp">
+
+            <com.appincreible.musicplayer.themes.view.PlayerAppearancePreviewView
+                android:id="@+id/playerAppearancePreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_margin="8dp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/playerVisibilityCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="14dp"
+            android:layout_marginTop="8dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="10dp">
+
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerBackSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Botón atrás" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerHeaderLabelSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Reproduciendo" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerMusicButtonSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Botón Música" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerArtworkSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Mostrar portada" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <LinearLayout
+                    android:id="@+id/artworkRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="68dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="10dp">
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/artworkShapePreview"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:background="@drawable/bg_artwork"
+                        app:shapeAppearanceOverlay="@style/AppIncreibleRoundedArtworkShape"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tamaño y forma de portada" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                        <TextView android:id="@+id/artworkValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Grande · Redondeada" android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerProgressLineSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Mostrar barra de progreso" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <LinearLayout
+                    android:id="@+id/progressStyleRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/music_row_height"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/space_12">
+                    <TextView
+                        android:layout_width="@dimen/music_action_size"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="〰"
+                        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                        android:textColor="?attr/colorPrimary"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_16"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Estilo de barra de progreso" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                        <TextView android:id="@+id/progressStyleValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="Clásica" android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerTitleSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Título de la canción" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerArtistSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Banda / artista" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerAlbumSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Álbum" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerShuffleSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Botón aleatorio" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerQueueSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Cola de reproducción" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerRepeatSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Botón repetición" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutlineVariant"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showPlayerModeTextSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="52dp" android:text="Texto del estado de los botones" android:textAppearance="?attr/textAppearanceBodyLarge"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:paddingHorizontal="20dp" android:text="AUDIO" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold" android:id="@+id/audioSectionLabel"/>
+
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface" android:id="@+id/playbackOrderCard">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="CANCIONES" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold" android:id="@+id/songOrderLabel"/>
+
+                <com.google.android.material.button.MaterialButton android:id="@+id/songShuffleSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Orden de siguiente: Lista" android:textAppearance="?attr/textAppearanceBodyLarge" style="?attr/materialButtonOutlinedStyle"/><com.google.android.material.button.MaterialButton android:id="@+id/songRepeatButton" style="?attr/materialButtonOutlinedStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Repetición: Desactivada"/>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="14dp" android:background="?attr/colorOutlineVariant" android:id="@+id/orderDivider"/>
+
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="RADIO" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold" android:id="@+id/radioOrderLabel"/>
+
+                <com.google.android.material.button.MaterialButton android:id="@+id/radioShuffleSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Orden de siguiente: Lista" android:textAppearance="?attr/textAppearanceBodyLarge" style="?attr/materialButtonOutlinedStyle"/><com.google.android.material.button.MaterialButton android:id="@+id/radioRepeatButton" style="?attr/materialButtonOutlinedStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Repetición: Desactivada"/>
+
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Radio usa el orden de la lista visible; Favoritas sigue siendo un filtro, no un orden separado." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant" android:id="@+id/radioOrderHelp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/radioStationCountCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="@dimen/space_16" android:layout_marginTop="@dimen/space_8" app:cardCornerRadius="@dimen/radius_16" app:cardElevation="@dimen/elevation_flat" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="@dimen/music_row_height" android:orientation="horizontal" android:paddingHorizontal="@dimen/space_20">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Cantidad de emisoras" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="Muestra el total de emisoras visibles en Radio." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/radioStationCountSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView android:id="@+id/transitionsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:paddingHorizontal="20dp" android:text="TRANSICIONES" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold"/><com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface" android:id="@+id/fadeCard">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/fadePauseSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Fade al pausar / reanudar" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Evita clicks bajando y subiendo el audio suavemente." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <TextView android:id="@+id/fadePauseValue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="300 ms" android:textAppearance="?attr/textAppearanceLabelLarge"/>
+                <SeekBar android:id="@+id/fadePauseSeek" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="800"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface" android:id="@+id/crossfadeCard">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/crossfadeSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Crossfade" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Mezcla el final de una canción con el inicio de la siguiente." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <TextView android:id="@+id/crossfadeValue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="4.0 s" android:textAppearance="?attr/textAppearanceLabelLarge"/>
+                <SeekBar android:id="@+id/crossfadeSeek" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="120"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/skipSameAlbumSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="No mezclar pistas consecutivas del mismo álbum" android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/gaplessSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Reproducción sin cortes (gapless)" android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Gapless usa el mismo motor de transición con duración 0 s." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView android:id="@+id/volumeLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:paddingHorizontal="20dp" android:text="VOLUMEN" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold"/><com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface" android:id="@+id/normalizationCard">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/normalizationSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Normalización de volumen" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ReplayGain primero; si falta, analiza la pista una sola vez y guarda el resultado." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <com.google.android.material.chip.ChipGroup android:id="@+id/normalizationTargetGroup" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" app:singleSelection="true" app:selectionRequired="true">
+                    <com.google.android.material.chip.Chip android:id="@+id/normalizationSoft" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="Suave"/>
+                    <com.google.android.material.chip.Chip android:id="@+id/normalizationNormal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="Normal"/>
+                    <com.google.android.material.chip.Chip android:id="@+id/normalizationLoud" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="Fuerte"/>
+                </com.google.android.material.chip.ChipGroup>
+                <ProgressBar android:id="@+id/analysisProgress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:max="100"/>
+                <TextView android:id="@+id/analysisStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Sin análisis en curso" android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <com.google.android.material.button.MaterialButton android:id="@+id/analyzeLibraryButton" style="?attr/materialButtonOutlinedStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Analizar biblioteca"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
+        <TextView android:id="@+id/djSectionLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:paddingHorizontal="20dp" android:text="DJ LOQUENDO" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold"/><com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface" android:id="@+id/djCard">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/djLoquendoSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="DJ Loquendo" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Algunas veces habla entre canciones usando una voz offline instalada en el teléfono." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+
+                <TextView android:id="@+id/djProbabilityValue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Frecuencia: 30%" android:textAppearance="?attr/textAppearanceLabelLarge"/>
+
+                <SeekBar android:id="@+id/djProbabilitySeek" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="80"/>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton android:id="@+id/djPhrasesButton" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Editar frases"/>
+
+                    <com.google.android.material.button.MaterialButton android:id="@+id/djVoiceButton" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:layout_weight="1" android:text="Elegir voz"/>
+                </LinearLayout>
+
+                <TextView android:id="@+id/djVoiceValue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Voz: automática offline" android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:paddingHorizontal="20dp" android:text="APLICACIÓN" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold" android:id="@+id/applicationSectionLabel"/>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/startPageRow" android:layout_width="match_parent" android:layout_height="72dp" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Pantalla al abrir" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:id="@+id/startPageValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Música" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/tabsRow" android:layout_width="match_parent" android:layout_height="72dp" android:layout_marginHorizontal="14dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Pestañas de Música" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:id="@+id/tabsValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Arriba" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/navigationRow" android:layout_width="match_parent" android:layout_height="72dp" android:layout_marginHorizontal="14dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Barra inferior" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:id="@+id/navigationValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Música · Radio · Juegos" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/themeRow" android:layout_width="match_parent" android:layout_height="72dp" android:layout_marginHorizontal="14dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Tema" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:id="@+id/themeValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sistema" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
+        <TextView
+            android:id="@+id/appBackgroundSectionLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:paddingHorizontal="20dp"
+            android:text="FONDO DE LA APP"
+            android:textAppearance="?attr/textAppearanceLabelLarge"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/appBackgroundPreviewCard"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_marginHorizontal="14dp"
+            android:layout_marginTop="8dp"
+            app:cardCornerRadius="22dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/colorOutline">
+
+            <com.appincreible.musicplayer.themes.view.PlayerBackgroundView
+                android:id="@+id/appBackgroundPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/appBackgroundRow" android:layout_width="match_parent" android:layout_height="72dp" android:layout_marginHorizontal="14dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardBackgroundColor="?attr/colorSurfaceContainerLow" app:cardCornerRadius="18dp" app:cardElevation="0dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <TextView android:layout_width="38dp" android:layout_height="38dp" android:gravity="center" android:text="◌" android:textAppearance="?attr/textAppearanceTitleLarge"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fondo de la app" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/appBackgroundValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Oscuro" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/appBackgroundColorsRow" android:layout_width="match_parent" android:layout_height="72dp" android:layout_marginHorizontal="14dp" android:layout_marginTop="2dp" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardBackgroundColor="?attr/colorSurfaceContainerLow" app:cardCornerRadius="18dp" app:cardElevation="0dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
+                <View android:id="@+id/appBackgroundColorPreview" android:layout_width="38dp" android:layout_height="38dp" android:background="@drawable/bg_color_preview"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Colores del fondo" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:id="@+id/appBackgroundColorsValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Acento" android:textAppearance="?attr/textAppearanceBodyMedium" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="›" android:textAppearance="?attr/textAppearanceHeadlineSmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/listTransparentCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="2dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="76dp" android:orientation="horizontal" android:paddingHorizontal="20dp">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Lista transparente" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Deja ver el fondo manteniendo contraste legible." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+        </LinearLayout>
+        <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/listTransparentSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView><com.google.android.material.card.MaterialCardView android:id="@+id/centerPlayerInfoCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="76dp" android:orientation="horizontal" android:paddingHorizontal="20dp">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:id="@+id/centerPlayerInfoLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Centrar título y artista" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Alinea la información principal en Reproduciendo." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/centerPlayerInfoSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView><com.google.android.material.card.MaterialCardView android:id="@+id/showBottomNavCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="76dp" android:orientation="horizontal" android:paddingHorizontal="20dp">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mostrar barra inferior en Reproduciendo" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Mantiene accesos de la app visibles en el reproductor." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/showBottomNavNowPlayingSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView><com.google.android.material.card.MaterialCardView android:id="@+id/miniSubtitleCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="76dp" android:orientation="horizontal" android:paddingHorizontal="20dp">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:id="@+id/miniSubtitleLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mostrar artista / emisora" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Muestra el subtítulo en el mini-player." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/miniSubtitleSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView android:id="@+id/miniPlayerBackgroundCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="@dimen/space_16" android:layout_marginTop="@dimen/space_8" app:cardCornerRadius="@dimen/radius_16" app:cardElevation="@dimen/elevation_flat" app:cardBackgroundColor="?attr/colorSurface">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="@dimen/music_row_height" android:orientation="horizontal" android:paddingHorizontal="@dimen/space_20">
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fondo del mini reproductor" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="Usa los colores de Reproduciendo; apagado vuelve al color sólido clásico." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/miniPlayerBackgroundSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/librarySectionLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:paddingHorizontal="20dp"
+            android:text="BIBLIOTECA"
+            android:textAppearance="?attr/textAppearanceLabelLarge"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/libraryGroupingRow"
+            android:layout_width="match_parent"
+            android:layout_height="84dp"
+            android:layout_marginHorizontal="14dp"
+            android:layout_marginTop="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp">
+
+                <ImageView
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:contentDescription="Biblioteca"
+                    android:padding="7dp"
+                    android:src="@drawable/ic_library"
+                    app:tint="?attr/colorPrimary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="18dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Agrupar canciones por"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <TextView
+                        android:id="@+id/libraryGroupingValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Banda y álbum"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/hideWhatsAppAudioCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="14dp"
+            android:layout_marginTop="8dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="76dp"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ocultar audios de WhatsApp"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Oculta WhatsApp Audio y notas de voz de la biblioteca."
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/hideWhatsAppAudioSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/librarySourceFoldersCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/space_16"
+            android:layout_marginTop="@dimen/space_8"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="@dimen/radius_16"
+            app:cardElevation="@dimen/elevation_flat">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingTop="@dimen/space_16"
+                android:paddingBottom="@dimen/space_8">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="@dimen/space_16"
+                    android:paddingEnd="@dimen/space_16"
+                    android:text="Carpetas de música"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:paddingStart="@dimen/space_16"
+                    android:paddingEnd="@dimen/space_16"
+                    android:text="Desactivá una carpeta para excluir sus canciones de la app."
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <LinearLayout
+                    android:id="@+id/librarySourceFoldersContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

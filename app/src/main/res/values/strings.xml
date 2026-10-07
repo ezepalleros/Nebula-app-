@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Nebula</string>
+    <string name="tagline">Tu música, a tu manera.</string>
+    <string name="music">Música</string>
+    <string name="radio">Radio</string>
+    <string name="games">Juegos</string>
+    <string name="settings">Ajustes</string>
+    <string name="now_playing">Reproduciendo</string>
+    <string name="playback_channel_name">Reproducción</string>
+    <string name="playback_channel_description">Controles de música y radio en reproducción</string>
+    <string name="permission_setup_title">Antes de empezar</string>
+    <string name="permission_setup_subtitle">Tu Música necesita acceso al audio del dispositivo y a las notificaciones para cargar la biblioteca y mantener disponibles los controles de reproducción.</string>
+    <string name="permission_audio_title">Música y archivos</string>
+    <string name="permission_audio_description">Permite encontrar y cargar las canciones guardadas en el dispositivo.</string>
+    <string name="permission_notifications_title">Notificaciones</string>
+    <string name="permission_notifications_description">Permite mostrar los controles del reproductor fuera de la app.</string>
+    <string name="permission_status_granted">Permitido</string>
+    <string name="permission_status_required">Necesario</string>
+    <string name="permission_setup_required_note">Los dos permisos son necesarios para continuar. Si Android ya no muestra el diálogo de permiso, usá Abrir ajustes.</string>
+    <string name="permission_grant_and_continue">Permitir y continuar</string>
+    <string name="permission_open_settings">Abrir ajustes</string>
+</resources>

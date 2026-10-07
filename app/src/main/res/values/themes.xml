@@ -1,0 +1,31 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.AppIncreible" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/ui_accent_light</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/ui_accent_container_light</item>
+        <item name="colorOnPrimaryContainer">@color/ui_text_primary_light</item>
+        <item name="colorSecondary">@color/accent_secondary</item>
+        <item name="colorSecondaryContainer">@color/secondary_soft</item>
+        <item name="colorSurface">@color/ui_surface_light</item>
+        <item name="colorSurfaceVariant">@color/ui_surface_variant_light</item>
+        <item name="colorSurfaceContainerLow">@color/ui_surface_container_light</item>
+        <item name="colorOnSurface">@color/ui_text_primary_light</item>
+        <item name="colorOnSurfaceVariant">@color/ui_text_secondary_light</item>
+        <item name="colorOutlineVariant">@color/ui_outline_light</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/ui_surface_light</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+
+    <style name="Widget.AppIncreible.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">@dimen/radius_24</item>
+        <item name="cardElevation">@dimen/elevation_flat</item>
+    </style>
+
+    <style name="AppIncreibleRoundedArtworkShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/radius_16</item>
+    </style>
+</resources>

@@ -1,0 +1,39 @@
+<resources>
+    <style name="TextAppearance.AppIncreible.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="TextAppearance.AppIncreible.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.AppIncreible.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">@dimen/text_title</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.AppIncreible.Headline" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textSize">@dimen/text_headline</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="Widget.AppIncreible.Card.Adaptive" parent="Widget.Material3.CardView.Filled">
+        <item name="cardCornerRadius">@dimen/radius_24</item>
+        <item name="cardElevation">@dimen/elevation_flat</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainerLow</item>
+        <item name="strokeColor">?attr/colorOutlineVariant</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="Widget.AppIncreible.Button.Primary" parent="Widget.Material3.Button">
+        <item name="cornerRadius">@dimen/radius_16</item>
+        <item name="android:textSize">@dimen/text_body_small</item>
+    </style>
+
+    <style name="Widget.AppIncreible.Button.Secondary" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">@dimen/radius_16</item>
+        <item name="android:textSize">@dimen/text_body_small</item>
+    </style>
+</resources>

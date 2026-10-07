@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/musicFragment">
+
+    <fragment android:id="@+id/musicFragment" android:name="com.appincreible.musicplayer.ui.music.MusicFragment" android:label="Música" />
+    <fragment android:id="@+id/radioFragment" android:name="com.appincreible.musicplayer.ui.radio.RadioFragment" android:label="Radio" />
+    <fragment android:id="@+id/gamesFragment" android:name="com.appincreible.musicplayer.ui.games.GamesFragment" android:label="Juegos" />
+    <fragment android:id="@+id/guessSongFragment" android:name="com.appincreible.musicplayer.ui.games.GuessSongFragment" android:label="Adivina la canción" />
+    <fragment android:id="@+id/intruderGameFragment" android:name="com.appincreible.musicplayer.ui.games.IntruderGameFragment" android:label="El intruso" />
+    <fragment android:id="@+id/settingsFragment" android:name="com.appincreible.musicplayer.ui.settings.SettingsFragment" android:label="Configuración" />
+    <fragment android:id="@+id/libraryFolderFragment" android:name="com.appincreible.musicplayer.ui.music.LibraryFolderFragment" android:label="Carpetas" />
+    <fragment android:id="@+id/collectionFragment" android:name="com.appincreible.musicplayer.ui.music.CollectionFragment" android:label="Colección" />
+    <fragment android:id="@+id/nowPlayingFragment" android:name="com.appincreible.musicplayer.ui.player.NowPlayingFragment" android:label="Reproduciendo" />
+</navigation>

@@ -1,0 +1,21 @@
+<resources>
+    <style name="Theme.AppIncreible" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/ui_accent_dark</item>
+        <item name="colorOnPrimary">#10245F</item>
+        <item name="colorPrimaryContainer">@color/ui_accent_container_dark</item>
+        <item name="colorOnPrimaryContainer">@color/ui_text_primary_dark</item>
+        <item name="colorSecondary">@color/night_secondary</item>
+        <item name="colorSecondaryContainer">@color/night_secondary_soft</item>
+        <item name="colorSurface">@color/ui_surface_dark</item>
+        <item name="colorSurfaceVariant">@color/ui_surface_variant_dark</item>
+        <item name="colorSurfaceContainerLow">@color/ui_surface_container_dark</item>
+        <item name="colorOnSurface">@color/ui_text_primary_dark</item>
+        <item name="colorOnSurfaceVariant">@color/ui_text_secondary_dark</item>
+        <item name="colorOutlineVariant">@color/ui_outline_dark</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/ui_surface_dark</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>

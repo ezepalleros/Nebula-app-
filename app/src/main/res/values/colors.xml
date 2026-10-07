@@ -1,0 +1,59 @@
+<resources>
+    <!-- Existing palette kept for backwards compatibility with current layouts/code. -->
+    <color name="ink">#151922</color>
+    <color name="ink_muted">#626A78</color>
+    <color name="surface">#F8F9FC</color>
+    <color name="surface_variant">#EEF1F7</color>
+    <color name="surface_container_low">#FFFFFF</color>
+    <color name="outline">#DCE1EA</color>
+    <color name="accent">#315CFF</color>
+    <color name="accent_soft">#DFE6FF</color>
+    <color name="accent_secondary">#007E7D</color>
+    <color name="secondary_soft">#C8F3F0</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <color name="night_surface">#0E1116</color>
+    <color name="night_surface_variant">#1B2029</color>
+    <color name="night_surface_container_low">#151A22</color>
+    <color name="night_outline">#303744</color>
+    <color name="night_text">#F1F4FA</color>
+    <color name="night_text_muted">#AEB7C5</color>
+    <color name="night_accent">#9CB3FF</color>
+    <color name="night_accent_soft">#203A80</color>
+    <color name="night_secondary">#6FD7D2</color>
+    <color name="night_secondary_soft">#124B4A</color>
+
+    <!-- Semantic design tokens. Future layouts should consume theme attrs mapped to these. -->
+    <color name="ui_surface_light">#F8F9FC</color>
+    <color name="ui_surface_variant_light">#EEF1F7</color>
+    <color name="ui_surface_container_light">#FFFFFF</color>
+    <color name="ui_text_primary_light">#151922</color>
+    <color name="ui_text_secondary_light">#626A78</color>
+    <color name="ui_accent_light">#315CFF</color>
+    <color name="ui_accent_container_light">#DFE6FF</color>
+    <color name="ui_outline_light">#DCE1EA</color>
+
+    <color name="ui_surface_dark">#0E1116</color>
+    <color name="ui_surface_variant_dark">#1B2029</color>
+    <color name="ui_surface_container_dark">#151A22</color>
+    <color name="ui_text_primary_dark">#F1F4FA</color>
+    <color name="ui_text_secondary_dark">#AEB7C5</color>
+    <color name="ui_accent_dark">#9CB3FF</color>
+    <color name="ui_accent_container_dark">#203A80</color>
+    <color name="ui_outline_dark">#303744</color>
+
+    <color name="ui_scrim_dark_24">#3D000000</color>
+    <color name="ui_scrim_dark_40">#66000000</color>
+    <color name="ui_scrim_light_24">#3DFFFFFF</color>
+    <color name="ui_disabled_content">#61000000</color>
+    <!-- Settings category accents: decorative only; text keeps semantic contrast colors. -->
+    <color name="settings_category_appearance">#A970FF</color>
+    <color name="settings_category_navigation">#5B8CFF</color>
+    <color name="settings_category_player">#FF5FA2</color>
+    <color name="settings_category_audio">#26C6B8</color>
+    <color name="settings_category_radio">#FFB547</color>
+    <color name="settings_category_library">#7EC8FF</color>
+    <color name="settings_category_battery">#69D47C</color>
+
+</resources>
