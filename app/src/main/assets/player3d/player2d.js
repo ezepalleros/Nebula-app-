@@ -3,6 +3,7 @@
   const canvas=document.getElementById('flat');
   let style=null,accent='#4F7DFF',playing=false,animation=1,visible=false,requestedVisible=true,typography='modern',artworkShape='rounded',initialized=false;
   let title='',artist='',artData='',artImage=null;
+  let shuffle=false,repeatMode=0,favorite=false,favoriteVisible=false,queueVisible=false,backgroundColor='#385044';
   let ui={artwork:true,title:true,artist:true,progress:true,waves:true,shuffle:true,repeat:true,modeText:true};
   let positionMs=0,durationMs=0,raf=0,last=0,lastInteraction=0,pageVisible=!document.hidden,lastSpectrumPull=0;
   const spectrum=new Float32Array(24), peaks=new Float32Array(24);
@@ -35,13 +36,13 @@
     resize();
     updateSpectrum(Number(ts)||performance.now());
     const progress=durationMs>0?Math.max(0,Math.min(1,positionMs/durationMs)):0;
-    PlayerModels.drawSkin2D(canvas,style,{accent,title,artist,artImage,artworkShape,playing,animation,immersive:style==='spotify2d',progress,positionMs,durationMs,tick:ts||Date.now(),typography,spectrum,peaks,ui});
+    PlayerModels.drawSkin2D(canvas,style,{accent,title,artist,artImage,artworkShape,playing,animation,immersive:style==='spotify2d',progress,positionMs,durationMs,tick:ts||Date.now(),typography,spectrum,peaks,ui,shuffle,repeatMode,favorite,favoriteVisible,queueVisible,backgroundColor});
   }
   function styleNeedsMotion(){
     if(!playing)return false;
     if(style==='equalizer2d')return true;
     if(animation<=0)return false;
-    return style==='neon'||(style==='spotify2d'&&ui.waves!==false);
+    return style==='neon';
   }
   function shouldAnimate(ts){return canRender()&&(styleNeedsMotion()||(ts-lastInteraction<1400));}
   function loop(ts){
@@ -83,7 +84,7 @@
   canvas.addEventListener('pointerup',e=>{
     if(!initialized)return;markInteraction();schedule();if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=0;}
     if(longPressFired)return;
-    const p=normalized(e);const action=PlayerModels.get2DControlAt(style,p.x,p.y);
+    const p=normalized(e);const r=canvas.getBoundingClientRect();const action=PlayerModels.get2DControlAt(style,p.x,p.y,r.width/Math.max(1,r.height),{favoriteVisible,queueVisible});
     if(action&&((action.cmd!=='shuffle'||ui.shuffle)&&(action.cmd!=='repeat'||ui.repeat)&&(action.cmd!=='seek'||ui.progress)))send(action.cmd,action);
   });
   canvas.addEventListener('pointercancel',()=>{markInteraction();schedule();if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=0;}});
@@ -102,6 +103,10 @@
     setArtworkDataUrl(v){artData=v||'';loadArt(()=>{if(!initialized)finishInitialRender();else{render();notifyReady();}});},
     setTrack(t,a,d){title=t||'';artist=a||'';artData=d||'';loadArt(()=>{if(!initialized)finishInitialRender();else{render();notifyReady();}});},
     setProgress(p,d){positionMs=Math.max(0,Number(p)||0);durationMs=Math.max(0,Number(d)||0);if(style==='spotify2d')render();},
+    setPlaybackModes(s,r){shuffle=!!s;repeatMode=Math.max(0,Math.min(2,Number(r)||0));if(initialized)render();},
+    setFavorite(v,visibleFlag){favorite=!!v;favoriteVisible=!!visibleFlag;if(initialized)render();},
+    setQueueVisible(v){queueVisible=!!v;if(initialized)render();},
+    setBackgroundColor(v){backgroundColor=typeof v==='string'?v:'#385044';if(initialized)render();},
     setVisibility(artwork,titleVisible,artistVisible,progressVisible,wavesVisible,shuffleVisible,repeatVisible,modeTextVisible){
       ui.artwork=!!artwork;ui.title=!!titleVisible;ui.artist=!!artistVisible;ui.progress=!!progressVisible;ui.waves=!!wavesVisible;
       ui.shuffle=!!shuffleVisible;ui.repeat=!!repeatVisible;ui.modeText=!!modeTextVisible;render();

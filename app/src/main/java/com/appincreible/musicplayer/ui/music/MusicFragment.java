@@ -404,7 +404,7 @@ public class MusicFragment extends Fragment {
     private void applyAdaptiveMusicSurface() {
         UiPalette palette = UiPalette.fallback(requireContext());
         int requestedAccent = AppPreferences.getPlayerAccentColor(requireContext());
-        int background = resolveMusicBackgroundColor(palette.surface, requestedAccent);
+        int background = ListAppearance.resolveRenderedBackground(requireContext());
         int tabText = UiPalette.readableTextColor(background);
         int selectedTab = ColorUtils.calculateContrast(requestedAccent, background) >= UiPalette.MIN_TEXT_CONTRAST
                 ? requestedAccent : tabText;

@@ -1,11 +1,11 @@
 <resources>
     <!-- Existing palette kept for backwards compatibility with current layouts/code. -->
-    <color name="ink">#151922</color>
-    <color name="ink_muted">#626A78</color>
-    <color name="surface">#F8F9FC</color>
-    <color name="surface_variant">#EEF1F7</color>
+    <color name="ink">#181B22</color>
+    <color name="ink_muted">#5C6472</color>
+    <color name="surface">#F7F8FC</color>
+    <color name="surface_variant">#F1F3F8</color>
     <color name="surface_container_low">#FFFFFF</color>
-    <color name="outline">#DCE1EA</color>
+    <color name="outline">#D7DCE6</color>
     <color name="accent">#315CFF</color>
     <color name="accent_soft">#DFE6FF</color>
     <color name="accent_secondary">#007E7D</color>
@@ -25,14 +25,14 @@
     <color name="night_secondary_soft">#124B4A</color>
 
     <!-- Semantic design tokens. Future layouts should consume theme attrs mapped to these. -->
-    <color name="ui_surface_light">#F8F9FC</color>
-    <color name="ui_surface_variant_light">#EEF1F7</color>
+    <color name="ui_surface_light">#F7F8FC</color>
+    <color name="ui_surface_variant_light">#F1F3F8</color>
     <color name="ui_surface_container_light">#FFFFFF</color>
-    <color name="ui_text_primary_light">#151922</color>
-    <color name="ui_text_secondary_light">#626A78</color>
+    <color name="ui_text_primary_light">#181B22</color>
+    <color name="ui_text_secondary_light">#5C6472</color>
     <color name="ui_accent_light">#315CFF</color>
     <color name="ui_accent_container_light">#DFE6FF</color>
-    <color name="ui_outline_light">#DCE1EA</color>
+    <color name="ui_outline_light">#D7DCE6</color>
 
     <color name="ui_surface_dark">#0E1116</color>
     <color name="ui_surface_variant_dark">#1B2029</color>

@@ -210,11 +210,14 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
         MediaItem targetItem = queue.get(target);
         if (targetItem.mediaId != null && targetItem.mediaId.startsWith("radio:")) {
             transitionEngine.cancelForQueueChange();
+            radioRecoveryAttempts.removeIf(key -> key.startsWith(targetItem.mediaId + "#"));
             internal(() -> {
-                activePlayer.pause();
+                // Recreate the selected live source instead of seeking inside a stopped stream.
+                // External MediaSession controls (lock screen / notification / Bluetooth) reach
+                // this path directly, so the target station must be prepared from a fresh source.
                 activePlayer.stop();
                 activeGain.setEnvelopeImmediately(1f);
-                activePlayer.seekTo(target, safePosition);
+                activePlayer.setMediaItems(queue, target, safePosition);
                 activePlayer.prepare();
                 activePlayer.play();
             });

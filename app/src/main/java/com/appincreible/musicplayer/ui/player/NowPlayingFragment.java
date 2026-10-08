@@ -189,11 +189,18 @@ public class NowPlayingFragment extends Fragment {
         });
         viewModel.getArtworkUri().observe(getViewLifecycleOwner(), this::loadArtworkForRenderers);
         viewModel.getHasMedia().observe(getViewLifecycleOwner(), available -> {
-            hasMedia = Boolean.TRUE.equals(available);
+            boolean mediaAvailable = Boolean.TRUE.equals(available);
+            boolean availabilityChanged = hasMedia != mediaAvailable;
+            hasMedia = mediaAvailable;
             if (!hasMedia) {
-                destroyRenderer();
-                showStaticArtwork();
-            } else {
+                if (availabilityChanged || rendererWeb != null) {
+                    destroyRenderer();
+                    showStaticArtwork();
+                }
+            } else if (availabilityChanged || rendererWeb == null) {
+                // PlayerController republishes hasMedia=true for play/pause, shuffle and repeat.
+                // Do not re-prepare an already-visible renderer for those state-only updates:
+                // setPlaying()/setPlaybackModes() update the canvas in place without flashing.
                 ensureRendererForCurrentState();
             }
         });
@@ -498,6 +505,7 @@ public class NowPlayingFragment extends Fragment {
         float animation = AppPreferences.getAnimationMultiplier(requireContext());
         if (rendererTwoDimensional) {
             push2dVisibility();
+            pushSpotify2dState();
             rendererWeb.evaluateJavascript("Player2D.setProgress(" + positionMs + "," + durationMs + ")", null);
             rendererWeb.evaluateJavascript("Player2D.prepare("
                     + JSONObject.quote(style) + "," + JSONObject.quote(hex) + "," + animation + ","
@@ -528,6 +536,7 @@ public class NowPlayingFragment extends Fragment {
             eval2d("Player2D.setArtworkShape("
                     + JSONObject.quote(AppPreferences.getArtworkShape(requireContext())) + ")");
             eval2d("Player2D.setPlaying(" + playing + ")");
+            pushSpotify2dState();
         } else {
             eval3d("Player3D.setAccent(" + JSONObject.quote(hex) + ")");
             eval3d("Player3D.setAnimation(" + animation + ")");
@@ -550,6 +559,17 @@ public class NowPlayingFragment extends Fragment {
             case "next": viewModel.next(); break;
             case "shuffle": viewModel.toggleShuffle(); break;
             case "repeat": viewModel.cycleRepeatMode(); break;
+            case "favorite":
+                if (!radioMedia && currentSong != null && musicViewModel != null) {
+                    musicViewModel.toggleFavorite(currentSong);
+                }
+                break;
+            case "queue":
+                if (!radioMedia && AppPreferences.showPlayerQueue(requireContext())
+                        && getParentFragmentManager().findFragmentByTag("spotify2d_queue") == null) {
+                    new QueueBottomSheet().show(getParentFragmentManager(), "spotify2d_queue");
+                }
+                break;
             case "edit": openEditor(); break;
             case "seek":
                 if (durationMs > 0) {
@@ -576,6 +596,21 @@ public class NowPlayingFragment extends Fragment {
                 + AppPreferences.showPlayerShuffle(requireContext()) + ","
                 + AppPreferences.showPlayerRepeat(requireContext()) + ","
                 + AppPreferences.showPlayerModeText(requireContext()) + ")");
+    }
+
+    private void pushSpotify2dState() {
+        if (binding == null || !rendererTwoDimensional
+                || !AppPreferences.STYLE_SPOTIFY_2D.equals(activeStyle)) return;
+        boolean favoriteVisible = !radioMedia && currentSong != null;
+        boolean favorite = favoriteVisible && musicViewModel != null
+                && musicViewModel.isFavorite(currentSong.getId());
+        boolean queueVisible = !radioMedia && AppPreferences.showPlayerQueue(requireContext());
+        UiPalette palette = currentPalette == null ? UiPalette.fallback(requireContext()) : currentPalette;
+        String backgroundHex = String.format(Locale.US, "#%06X", palette.surface & 0xFFFFFF);
+        eval2d("Player2D.setPlaybackModes(" + shuffleEnabled + "," + repeatMode + ")");
+        eval2d("Player2D.setFavorite(" + favorite + "," + favoriteVisible + ")");
+        eval2d("Player2D.setQueueVisible(" + queueVisible + ")");
+        eval2d("Player2D.setBackgroundColor(" + JSONObject.quote(backgroundHex) + ")");
     }
 
     private void pushMetadata() {
@@ -967,6 +1002,7 @@ public class NowPlayingFragment extends Fragment {
         binding.shuffleButton.setVisibility(AppPreferences.showPlayerShuffle(requireContext()) ? View.VISIBLE : View.GONE);
         binding.repeatButton.setVisibility(AppPreferences.showPlayerRepeat(requireContext()) ? View.VISIBLE : View.GONE);
         binding.playMode.setVisibility(View.GONE);
+        pushSpotify2dState();
     }
 
     private void applyMetadataVisibility() {
@@ -997,6 +1033,7 @@ public class NowPlayingFragment extends Fragment {
             binding.repeatButton.setContentDescription("Repetición desactivada");
         }
         stylePlaybackModeButton(binding.repeatButton, repeatEnabled);
+        pushSpotify2dState();
     }
 
     private void stylePlaybackModeButton(@NonNull androidx.appcompat.widget.AppCompatImageButton button,
@@ -1035,6 +1072,7 @@ public class NowPlayingFragment extends Fragment {
         if (binding == null || musicViewModel == null) return;
         if (radioMedia || currentSong == null) {
             binding.favoriteButton.setVisibility(View.GONE);
+            pushSpotify2dState();
             return;
         }
         boolean favorite = musicViewModel.isFavorite(currentSong.getId());
@@ -1042,6 +1080,7 @@ public class NowPlayingFragment extends Fragment {
         binding.favoriteButton.setImageResource(favorite
                 ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite_border);
         binding.favoriteButton.setColorFilter(favorite ? playerAccentColor : playerContentColor);
+        pushSpotify2dState();
     }
 
     private String paletteCacheKey() {
@@ -1070,18 +1109,21 @@ public class NowPlayingFragment extends Fragment {
         binding.album.setTextColor(playerSecondaryColor);
         binding.currentTime.setTextColor(playerSecondaryColor);
         binding.duration.setTextColor(playerSecondaryColor);
-        binding.headerLabel.setTextColor(playerContentColor);
+        boolean spotifyImmersive = immersive2d && AppPreferences.STYLE_SPOTIFY_2D.equals(activeStyle);
+        binding.headerLabel.setTextColor(spotifyImmersive ? Color.WHITE : playerContentColor);
 
         int subtleSurface = getResources().getColor(R.color.ui_scrim_light_24, requireContext().getTheme());
-        binding.backButton.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
-        binding.moreButton.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
+        int headerSurface = spotifyImmersive ? Color.TRANSPARENT : subtleSurface;
+        int headerContent = spotifyImmersive ? Color.WHITE : playerContentColor;
+        binding.backButton.setBackgroundTintList(ColorStateList.valueOf(headerSurface));
+        binding.moreButton.setBackgroundTintList(ColorStateList.valueOf(headerSurface));
         binding.previous.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
         binding.next.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
         binding.queueToggleLabel.setTextColor(playerContentColor);
         binding.queueStateIcon.setColorFilter(playerContentColor);
         binding.inlineQueueEmpty.setTextColor(playerSecondaryColor);
-        binding.backButton.setIconTint(ColorStateList.valueOf(playerContentColor));
-        binding.moreButton.setIconTint(ColorStateList.valueOf(playerContentColor));
+        binding.backButton.setIconTint(ColorStateList.valueOf(headerContent));
+        binding.moreButton.setIconTint(ColorStateList.valueOf(headerContent));
         binding.previous.setIconTint(ColorStateList.valueOf(playerContentColor));
         binding.next.setIconTint(ColorStateList.valueOf(playerContentColor));
         binding.playPause.setBackgroundTintList(ColorStateList.valueOf(playerAccentColor));
@@ -1090,6 +1132,7 @@ public class NowPlayingFragment extends Fragment {
         applySeekThumb(userSeeking);
         renderPlaybackModes();
         syncFavoriteButton();
+        pushSpotify2dState();
     }
 
     private int darkenForContrast(int color, int foreground) {

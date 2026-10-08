@@ -166,7 +166,7 @@ public class RadioFragment extends Fragment {
     private void applyAdaptiveRadioSurface() {
         UiPalette palette = UiPalette.fallback(requireContext());
         int requestedAccent = AppPreferences.getPlayerAccentColor(requireContext());
-        int background = resolveRadioBackgroundColor(palette.surface, requestedAccent);
+        int background = ListAppearance.resolveRenderedBackground(requireContext());
         boolean lightBackground = ColorUtils.calculateLuminance(background) > 0.55d;
 
         int backgroundText = UiPalette.readableTextColor(background);

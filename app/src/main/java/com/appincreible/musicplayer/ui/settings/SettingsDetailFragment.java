@@ -308,10 +308,12 @@ public class SettingsDetailFragment extends Fragment {
         if (binding == null) return;
         ListAppearance.Appearance appearance = ListAppearance.resolve(requireContext());
         tintSettingsTree(binding.getRoot(), appearance.containerColor,
-                appearance.primaryText, appearance.transparent);
+                appearance.primaryText, false);
         binding.settingsHeaderTitle.setTextColor(appearance.primaryText);
         binding.settingsHeaderSubtitle.setTextColor(appearance.secondaryText);
         binding.settingsBackButton.setColorFilter(appearance.primaryText);
+        binding.appBackgroundSectionLabel.setTextColor(appearance.secondaryText);
+        binding.playerVisibilityLabel.setTextColor(appearance.secondaryText);
     }
 
     private void tintSettingsTree(View view, int cardColor, int textColor, boolean forceText) {
