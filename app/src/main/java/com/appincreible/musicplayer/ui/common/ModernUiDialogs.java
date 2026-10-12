@@ -52,6 +52,8 @@ public final class ModernUiDialogs {
         void album();
         void artist();
         void editMetadata();
+        default void importLyrics() { }
+        default void exportLyrics() { }
         default void removeFromPlaylist() { }
         void deleteFromPhone();
     }
@@ -190,6 +192,8 @@ public final class ModernUiDialogs {
             addAction(root, context, "Artista", android.R.drawable.ic_menu_myplaces, primary, actions::artist, dialog);
         }
         addAction(root, context, "Editar información y portada", android.R.drawable.ic_menu_edit, primary, actions::editMetadata, dialog);
+        addAction(root, context, "Importar letra .lrc", android.R.drawable.ic_menu_upload, primary, actions::importLyrics, dialog);
+        addAction(root, context, "Exportar letra .lrc", android.R.drawable.ic_menu_save, primary, actions::exportLyrics, dialog);
         if (canRemoveFromPlaylist) {
             addAction(root, context, "Quitar de esta playlist", android.R.drawable.ic_menu_close_clear_cancel,
                     primary, actions::removeFromPlaylist, dialog);

@@ -16,6 +16,9 @@ import java.util.Set;
 public final class AppPreferences {
 
     public static final String PREFS = "app_preferences";
+    public static final String KEY_WRITE_TAGS_TO_FILES = "write_tags_to_files";
+    public static boolean writeTagsToFiles(Context context) { return prefs(context).getBoolean(KEY_WRITE_TAGS_TO_FILES, false); }
+
     public static final String KEY_PLAYLIST_ENTRY_ORDER = "playlist_entry_order";
     private static final String KEY_PLAYLIST_ARTWORK_PREFIX = "playlist_artwork:";
     public static final String KEY_THEME_MODE = "theme_mode";
@@ -256,7 +259,7 @@ public final class AppPreferences {
     public static boolean showPlayerWaves(Context context) { return true; }
     public static boolean showPlayerTitle(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_TITLE, true); }
     public static boolean showPlayerArtist(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_ARTIST, true); }
-    public static boolean showPlayerAlbum(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_ALBUM, true); }
+    public static boolean showPlayerAlbum(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_ALBUM, false); }
     public static boolean showPlayerShuffle(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_SHUFFLE, true); }
     public static boolean showPlayerQueue(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_QUEUE, true); }
     public static boolean showPlayerRepeat(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_REPEAT, true); }
@@ -538,8 +541,8 @@ public final class AppPreferences {
     public static boolean showRadioNav(Context context) { return prefs(context).getBoolean(KEY_SHOW_RADIO_NAV, true); }
     public static boolean showGamesNav(Context context) {
         SharedPreferences preferences = prefs(context);
-        if (preferences.contains(KEY_SHOW_GAMES_NAV)) return preferences.getBoolean(KEY_SHOW_GAMES_NAV, true);
-        boolean legacy = preferences.getBoolean(KEY_SHOW_DOWNLOADS_NAV, true);
+        if (preferences.contains(KEY_SHOW_GAMES_NAV)) return preferences.getBoolean(KEY_SHOW_GAMES_NAV, false);
+        boolean legacy = preferences.getBoolean(KEY_SHOW_DOWNLOADS_NAV, false);
         preferences.edit().putBoolean(KEY_SHOW_GAMES_NAV, legacy).commit();
         return legacy;
     }

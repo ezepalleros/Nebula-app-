@@ -73,7 +73,37 @@ public class MusicFragment extends Fragment {
     private String sortMode = "date";
     private List<Song> currentSource = Collections.emptyList();
     private List<Song> pendingDelete = Collections.emptyList();
+    private Song lyricsTargetSong;
+    private final ActivityResultLauncher<String[]> importSongLyricsLauncher = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(), uri -> {
+                Song song = lyricsTargetSong;
+                if (uri == null || song == null) return;
+                new Thread(() -> {
+                    try {
+                        new com.appincreible.musicplayer.lyrics.ManualLyricsRepository(requireContext())
+                                .importLrc("song:" + song.getId(), uri, true);
+                        if (isAdded()) requireActivity().runOnUiThread(() -> android.widget.Toast.makeText(requireContext(), "Letra importada", android.widget.Toast.LENGTH_SHORT).show());
+                    } catch (Exception e) {
+                        if (isAdded()) requireActivity().runOnUiThread(() -> android.widget.Toast.makeText(requireContext(), "No se pudo importar", android.widget.Toast.LENGTH_SHORT).show());
+                    }
+                }).start();
+            });
+    private final ActivityResultLauncher<String> exportSongLyricsLauncher = registerForActivityResult(
+            new ActivityResultContracts.CreateDocument("text/plain"), uri -> {
+                Song song = lyricsTargetSong;
+                if (uri == null || song == null) return;
+                new Thread(() -> {
+                    try {
+                        new com.appincreible.musicplayer.lyrics.ManualLyricsRepository(requireContext())
+                                .exportLrc("song:" + song.getId(), uri);
+                        if (isAdded()) requireActivity().runOnUiThread(() -> android.widget.Toast.makeText(requireContext(), "Letra exportada", android.widget.Toast.LENGTH_SHORT).show());
+                    } catch (Exception e) {
+                        if (isAdded()) requireActivity().runOnUiThread(() -> android.widget.Toast.makeText(requireContext(), "No hay letra interna para exportar", android.widget.Toast.LENGTH_SHORT).show());
+                    }
+                }).start();
+            });
     private boolean syncingTabs;
+    private static final String STATE_SEARCH_QUERY = "music_search_query";
     private String searchQuery = "";
     private final ListAppearance.Listener listAppearanceListener = () -> {
         if (binding != null) applyAdaptiveMusicSurface();
@@ -247,8 +277,29 @@ public class MusicFragment extends Fragment {
         }
         if (initialSection < SECTION_TRACKS || initialSection > SECTION_HIDDEN) initialSection = SECTION_TRACKS;
         switchSection(initialSection);
+        if (savedInstanceState != null) {
+            searchQuery = savedInstanceState.getString(STATE_SEARCH_QUERY, searchQuery);
+        }
+        restoreSearchField();
         renderPermissionState();
         if (hasAudioPermission()) musicViewModel.loadSongs();
+    }
+
+    private void restoreSearchField() {
+        if (binding == null || currentSection == SECTION_PLAYLISTS) return;
+        if (!searchQuery.isEmpty()) {
+            binding.searchInputLayout.setVisibility(View.VISIBLE);
+            if (!searchQuery.equals(String.valueOf(binding.searchInput.getText()))) {
+                binding.searchInput.setText(searchQuery);
+            }
+            binding.searchInput.clearFocus();
+        }
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_SEARCH_QUERY, searchQuery);
     }
 
     private void toggleSearch() {
@@ -413,6 +464,7 @@ public class MusicFragment extends Fragment {
             applyTabsPosition();
             applyAdaptiveMusicSurface();
             consumeLocateSongRequest();
+            restoreSearchField();
         }
     }
 
@@ -530,6 +582,17 @@ public class MusicFragment extends Fragment {
                     @Override public void album() { openCollection("album", song.getAlbum(), song.getAlbum(), -1L); }
                     @Override public void artist() { openCollection("artist", song.getArtist(), song.getArtist(), -1L); }
                     @Override public void editMetadata() { openEditor(song); }
+                    @Override public void importLyrics() {
+                        lyricsTargetSong = song;
+                        new MaterialAlertDialogBuilder(requireContext())
+                                .setMessage("¿Importar una letra y reemplazar la letra guardada para esta canción?")
+                                .setNegativeButton("Cancelar", null)
+                                .setPositiveButton("Importar", (d, w) -> importSongLyricsLauncher.launch(new String[]{"text/plain", "*/*"})).show();
+                    }
+                    @Override public void exportLyrics() {
+                        lyricsTargetSong = song;
+                        exportSongLyricsLauncher.launch(song.getTitle() + ".lrc");
+                    }
                     @Override public void deleteFromPhone() { requestDelete(Collections.singletonList(song)); }
                 });
     }

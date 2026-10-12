@@ -3,6 +3,7 @@ package com.appincreible.musicplayer.ui.player;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PendingIntent;
+import android.content.Intent;
 import android.content.ContentResolver;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
@@ -53,6 +54,7 @@ import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.appincreible.musicplayer.R;
+import com.appincreible.musicplayer.lyrics.LyricsEditorUi;
 import com.appincreible.musicplayer.data.model.Song;
 import com.appincreible.musicplayer.MainActivity;
 import com.appincreible.musicplayer.power.PowerSaverManager;
@@ -110,6 +112,8 @@ public class NowPlayingFragment extends Fragment {
     private SharedPreferences.OnSharedPreferenceChangeListener appearanceListener;
     private ShapeableImageView staticPlayerImage;
     private WebView rendererWeb;
+    private LyricsEditorUi lyricsUi;
+    private Integer artworkVisibilityBeforeTransparentLyrics;
     private Song currentSong;
     private Song pendingDeleteSong;
     private UiPalette currentPalette;
@@ -127,6 +131,15 @@ public class NowPlayingFragment extends Fragment {
     private boolean artworkSwipeTransitionRunning;
     private View pendingArtworkSwipeView;
     private int pendingArtworkSwipeDuration;
+
+    private final ActivityResultLauncher<String[]> importLyricsLauncher = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(), uri -> {
+                if (uri != null && lyricsUi != null) lyricsUi.importFrom(uri);
+            });
+    private final ActivityResultLauncher<String> exportLyricsLauncher = registerForActivityResult(
+            new ActivityResultContracts.CreateDocument("text/plain"), uri -> {
+                if (uri != null && lyricsUi != null) lyricsUi.exportTo(uri);
+            });
 
     private final ActivityResultLauncher<IntentSenderRequest> deleteCurrentSongLauncher = registerForActivityResult(
             new ActivityResultContracts.StartIntentSenderForResult(), result -> {
@@ -159,6 +172,36 @@ public class NowPlayingFragment extends Fragment {
         activeStyle = AppPreferences.getPlayerStyle(requireContext());
         installFullscreenInsets();
 
+        lyricsUi = new LyricsEditorUi(requireContext(), new LyricsEditorUi.Playback() {
+            @Override public long position() { return positionMs; }
+            @Override public void pauseToggle() { viewModel.togglePlayPause(); }
+            @Override public void rewindThreeSeconds() { viewModel.seekTo(Math.max(0L, positionMs - 3000L)); }
+        });
+        lyricsUi.attach(binding.artworkStage);
+        lyricsUi.setSeekBoundary(binding.seekBar);
+        lyricsUi.setVisibilityListener(visible -> {
+            if (binding == null) return;
+            if (visible) {
+                push2dVisibility();
+                enforceLyricsArtworkVisibility();
+            } else {
+                restoreLyricsArtworkVisibility();
+                restoreRendererAfterLyrics();
+                // Re-assert after the layout pass: immersive 2D skins may change
+                // canvas visibility while the overlay is removed.
+                binding.getRoot().post(() -> {
+                    if (binding == null || lyricsUi == null || lyricsUi.isVisible()) return;
+                    restoreLyricsArtworkVisibility();
+                    restoreRendererAfterLyrics();
+                });
+            }
+            if (visible) {
+                binding.playerHeader.setVisibility(View.GONE);
+                applyPlayerTopInsets(false);
+            } else {
+                applyPlayerElementVisibility(AppPreferences.STYLE_RING.equals(activeStyle));
+            }
+        });
         createStaticPlayerImage();
         applyPlayerAppearance();
         loadArtworkForRenderers(currentArtworkUri);
@@ -292,6 +335,7 @@ public class NowPlayingFragment extends Fragment {
                 binding.seekBar.setProgress((int) Math.min(1000L, (positionMs * 1000L) / durationMs));
             }
             push2dProgress();
+            if (lyricsUi != null) lyricsUi.tick(positionMs);
         });
 
         binding.playPause.setOnClickListener(v -> viewModel.togglePlayPause());
@@ -361,6 +405,66 @@ public class NowPlayingFragment extends Fragment {
         applyArtworkPreferences(AppPreferences.STYLE_RING.equals(activeStyle));
     }
 
+    // La portada nativa también vive en immersiveRendererHost (fuera de artworkStage).
+    // No ocultar el WebView ni el host: solo la imagen cuando Letras es transparente.
+    private boolean suppressArtworkForLyrics() {
+        return lyricsUi != null && lyricsUi.isTransparentVisible();
+    }
+
+    private void enforceLyricsArtworkVisibility() {
+        if (suppressArtworkForLyrics() && staticPlayerImage != null) {
+            if (artworkVisibilityBeforeTransparentLyrics == null)
+                artworkVisibilityBeforeTransparentLyrics = staticPlayerImage.getVisibility();
+            staticPlayerImage.animate().cancel();
+            staticPlayerImage.setVisibility(View.INVISIBLE);
+            staticPlayerImage.setAlpha(0f);
+            // Image alpha belongs to the drawable, so a later View alpha animation
+            // or Glide bitmap update cannot reveal the cover behind the lyrics.
+            staticPlayerImage.setImageAlpha(0);
+        }
+    }
+
+    private void restoreLyricsArtworkVisibility() {
+        if (staticPlayerImage != null && !suppressArtworkForLyrics()) {
+            // Even when the saved visibility is null, an artwork update may have
+            // set imageAlpha(0). Always restore the drawable opacity on close.
+            staticPlayerImage.animate().cancel();
+            staticPlayerImage.setImageAlpha(255);
+            staticPlayerImage.setAlpha(1f);
+            if (artworkVisibilityBeforeTransparentLyrics != null) {
+                staticPlayerImage.setVisibility(artworkVisibilityBeforeTransparentLyrics);
+            }
+        }
+        artworkVisibilityBeforeTransparentLyrics = null;
+    }
+
+    /** Restore the actual drawing surface, not just the fallback ImageView.
+     * Pausing playback used to make the artwork reappear because it refreshed the
+     * renderer; closing Lyrics must perform that refresh itself. */
+    private void restoreRendererAfterLyrics() {
+        if (binding == null || lyricsUi == null || lyricsUi.isVisible()) return;
+        if (rendererWeb != null && rendererReady && rendererContentReady) {
+            rendererWeb.animate().cancel();
+            rendererWeb.setVisibility(View.VISIBLE);
+            rendererWeb.setAlpha(1f);
+            rendererWeb.invalidate();
+            if (staticPlayerImage != null) {
+                staticPlayerImage.animate().cancel();
+                staticPlayerImage.setVisibility(View.GONE);
+            }
+            if (rendererTwoDimensional) {
+                push2dVisibility();
+            }
+        } else if (staticPlayerImage != null && !AppPreferences.STYLE_RING.equals(activeStyle)
+                && AppPreferences.showPlayerArtwork(requireContext())) {
+            staticPlayerImage.animate().cancel();
+            staticPlayerImage.setImageAlpha(255);
+            staticPlayerImage.setAlpha(1f);
+            staticPlayerImage.setVisibility(View.VISIBLE);
+            staticPlayerImage.invalidate();
+        }
+    }
+
     private void showStaticArtwork() {
         if (binding == null || staticPlayerImage == null) return;
         FrameLayout host = rendererHost();
@@ -373,6 +477,8 @@ public class NowPlayingFragment extends Fragment {
         } else {
             staticPlayerImage.setVisibility(View.VISIBLE);
         }
+        if (lyricsUi != null) lyricsUi.enforceTransparentArtworkHidden();
+        enforceLyricsArtworkVisibility();
         if (rendererWeb != null) {
             rendererWeb.animate().cancel();
             rendererWeb.setAlpha(0f);
@@ -435,17 +541,17 @@ public class NowPlayingFragment extends Fragment {
 
     @SuppressLint("SetJavaScriptEnabled")
     private boolean handleArtworkSwipe(View view, MotionEvent event) {
-        if (binding == null || viewModel == null || !hasMedia || radioMedia
-                || !AppPreferences.swipeArtworkToChangeTrack(requireContext())) {
+        if (binding == null || viewModel == null || !hasMedia || radioMedia) {
             artworkSwipeCandidate = false;
             return false;
         }
+        boolean swipeEnabled = AppPreferences.swipeArtworkToChangeTrack(requireContext());
 
         // When swipe-to-change is enabled, a 3D renderer must not also receive the same
         // drag gesture. Consuming the WebView touch stream here keeps the model fixed while
         // still allowing this listener to recognize left/right track swipes. If the option
         // is disabled, touches fall through normally and the 3D model remains interactive.
-        boolean lock3dModelTouch = view == rendererWeb && !rendererTwoDimensional;
+        boolean lock3dModelTouch = swipeEnabled && view == rendererWeb && !rendererTwoDimensional;
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
@@ -476,8 +582,16 @@ public class NowPlayingFragment extends Fragment {
                 if (view.getParent() != null) view.getParent().requestDisallowInterceptTouchEvent(false);
                 float dx = event.getX() - artworkSwipeDownX;
                 float dy = event.getY() - artworkSwipeDownY;
-                if (Math.abs(dx) >= dp(64) && Math.abs(dx) > Math.abs(dy) * 1.35f) {
+                if (swipeEnabled && Math.abs(dx) >= dp(64) && Math.abs(dx) > Math.abs(dy) * 1.35f) {
                     runArtworkSwipeTransition(view, dx < 0f);
+                    return true;
+                }
+                // Tap corto sin desplazamiento: abrir/cerrar letras. Los arrastres 3D
+                // y el gesto horizontal para cambiar canción conservan su comportamiento.
+                if (Math.abs(dx) < dp(12) && Math.abs(dy) < dp(12)
+                        && lyricsUi != null && !artworkSwipeTransitionRunning) {
+                    if (rendererTwoDimensional && view == rendererWeb) return false; // Canvas distingue botones de portada.
+                    toggleLyricsViewer();
                     return true;
                 }
                 return lock3dModelTouch;
@@ -668,6 +782,7 @@ public class NowPlayingFragment extends Fragment {
         binding.equalizerSkinBackground.setHostVisible(isResumed());
 
         // EqualizerBackgroundView owns this switch for its own skin. Ring uses the same
+        enforceLyricsArtworkVisibility();
         // spectrum source, so only override it while Ring is the active visualizer.
         if (ringSkin) EqualizerSpectrum.setAnalysisEnabled(binding.ringVisualizer.shouldAnalyze());
     }
@@ -685,8 +800,9 @@ public class NowPlayingFragment extends Fragment {
                 staticPlayerImage.setVisibility(View.GONE);
                 staticPlayerImage.setAlpha(1f);
             } else {
-                staticPlayerImage.setVisibility(View.VISIBLE);
-                staticPlayerImage.setAlpha(1f);
+                staticPlayerImage.setVisibility(suppressArtworkForLyrics() ? View.INVISIBLE : View.VISIBLE);
+                staticPlayerImage.setAlpha(suppressArtworkForLyrics() ? 0f : 1f);
+                if (suppressArtworkForLyrics()) staticPlayerImage.setImageAlpha(0);
                 staticPlayerImage.animate().alpha(0f).setDuration(140L).withEndAction(() -> {
                     if (staticPlayerImage != null) {
                         staticPlayerImage.setVisibility(View.GONE);
@@ -834,6 +950,7 @@ public class NowPlayingFragment extends Fragment {
                 }
                 break;
             case "edit": openEditor(); break;
+            case "lyrics": if (!radioMedia) toggleLyricsViewer(); break;
             case "seek":
                 if (durationMs > 0) {
                     try {
@@ -848,10 +965,40 @@ public class NowPlayingFragment extends Fragment {
         return true;
     }
 
+    private void toggleLyricsViewer() {
+        if (binding == null || lyricsUi == null || radioMedia || !hasMedia) return;
+        // Los estilos inmersivos ocultan artworkStage: mostrar el visor sobre su propio host.
+        if (lyricsUi.isVisible()) {
+            lyricsUi.hide();
+            return;
+        }
+        boolean lyricsFullscreen = AppPreferences.prefs(requireContext())
+                .getInt("lyrics_view_fullscreen", 0) == 1;
+        lyricsUi.setFullscreenHost(lyricsFullscreen);
+        // El host inmersivo de Spotify llena la pantalla: usar la raíz con
+        // límites propios para que el visor normal no cubra sus controles.
+        lyricsUi.setHost(lyricsFullscreen || immersive2d
+                ? binding.getRoot() : binding.artworkStage);
+        lyricsUi.setImmersiveLimitedHost(!lyricsFullscreen && immersive2d);
+        lyricsUi.show();
+        // La barra se ubica después del layout; no permitir que el visor
+        // transparente intercepte sus toques al abrir Letras.
+        binding.getRoot().post(() -> {
+            if (binding != null && lyricsUi != null && lyricsUi.isVisible())
+                lyricsUi.setSeekBoundary(binding.seekBar);
+        });
+        // En Spotify y los skins inmersivos, mantener la capa opaca por encima del WebView.
+        if (lyricsFullscreen) binding.getRoot().post(() -> {
+            if (binding != null && lyricsUi != null && lyricsUi.isVisible())
+                lyricsUi.ensureFullscreenOnTop();
+        });
+    }
+
     private void push2dVisibility() {
         if (!rendererReady || rendererWeb == null || !rendererTwoDimensional) return;
         eval2d("Player2D.setVisibility("
-                + AppPreferences.showPlayerArtwork(requireContext()) + ","
+                + (AppPreferences.showPlayerArtwork(requireContext())
+                    && !(lyricsUi != null && lyricsUi.isTransparentVisible())) + ","
                 + AppPreferences.showPlayerTitle(requireContext()) + ","
                 + AppPreferences.showPlayerArtist(requireContext()) + ","
                 + AppPreferences.showPlayerProgressLine(requireContext()) + ","
@@ -859,6 +1006,8 @@ public class NowPlayingFragment extends Fragment {
                 + AppPreferences.showPlayerShuffle(requireContext()) + ","
                 + AppPreferences.showPlayerRepeat(requireContext()) + ","
                 + AppPreferences.showPlayerModeText(requireContext()) + ")");
+        // El canvas redibuja al avanzar/retroceder: no volver a exponer la portada nativa.
+        enforceLyricsArtworkVisibility();
     }
 
     private void pushSpotify2dState() {
@@ -975,6 +1124,8 @@ public class NowPlayingFragment extends Fragment {
                             || !AppPreferences.showPlayerArtwork(requireContext()) ? View.GONE : View.VISIBLE);
                 }
                 binding.ringVisualizer.setArtwork(resource);
+                if (lyricsUi != null) lyricsUi.enforceTransparentArtworkHidden();
+                enforceLyricsArtworkVisibility();
                 currentPalette = UiPalette.fromBitmap(requireContext(), paletteCacheKey(), resource);
                 applyPaletteColors();
                 applyPlayerBackgroundPalette();
@@ -995,6 +1146,8 @@ public class NowPlayingFragment extends Fragment {
                             || !AppPreferences.showPlayerArtwork(requireContext()) ? View.GONE : View.VISIBLE);
                 }
                 binding.ringVisualizer.setNoArtwork();
+                if (lyricsUi != null) lyricsUi.enforceTransparentArtworkHidden();
+                enforceLyricsArtworkVisibility();
                 currentPalette = UiPalette.fallback(requireContext());
                 applyPaletteColors();
                 applyPlayerBackgroundPalette();
@@ -1448,14 +1601,15 @@ public class NowPlayingFragment extends Fragment {
         binding.backButton.setVisibility(showBack ? View.VISIBLE : View.GONE);
         binding.headerLabel.setVisibility(showHeader ? View.VISIBLE : View.GONE);
         binding.moreButton.setVisibility(showMore ? View.VISIBLE : View.GONE);
-        binding.playerHeader.setVisibility(anyHeader ? View.VISIBLE : View.GONE);
+        boolean lyricsShowing = lyricsUi != null && lyricsUi.isVisible();
+        binding.playerHeader.setVisibility(anyHeader && !lyricsShowing ? View.VISIBLE : View.GONE);
         binding.queueToggleRow.setVisibility(showQueue ? View.VISIBLE : View.GONE);
         if (showQueue) {
             setQueueExpanded(queueExpanded);
         } else {
             setQueueExpanded(false);
         }
-        applyPlayerTopInsets(anyHeader);
+        applyPlayerTopInsets(anyHeader && !lyricsShowing);
 
         boolean showArtwork = AppPreferences.showPlayerArtwork(requireContext());
         binding.artworkStage.setVisibility((showArtwork || ringSkin) ? View.VISIBLE : View.GONE);
@@ -1547,6 +1701,7 @@ public class NowPlayingFragment extends Fragment {
         String mediaKey = value(viewModel.getMediaKey().getValue());
         if (radioMedia || !mediaKey.startsWith("song:")) {
             currentSong = null;
+            if (lyricsUi != null) lyricsUi.setSong(null);
             syncFavoriteButton();
             return;
         }
@@ -1561,6 +1716,7 @@ public class NowPlayingFragment extends Fragment {
             }
         }
         syncFavoriteButton();
+        if (lyricsUi != null) lyricsUi.setCurrentSong(currentSong);
     }
 
     private void syncFavoriteButton() {
@@ -1718,6 +1874,7 @@ public class NowPlayingFragment extends Fragment {
             AppPreferences.prefs(requireContext()).unregisterOnSharedPreferenceChangeListener(appearanceListener);
             appearanceListener = null;
         }
+        if (lyricsUi != null) { lyricsUi.release(); lyricsUi = null; }
         destroyRenderer();
         if (staticPlayerImage != null) staticPlayerImage.setImageDrawable(null);
         staticPlayerImage = null;

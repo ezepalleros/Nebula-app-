@@ -49,6 +49,7 @@ public class RadioFavoritesRepository {
     }
 
     public void close() {
-        executor.shutdownNow();
+        // Allow queued database writes to finish when the screen closes.
+        executor.shutdown();
     }
 }

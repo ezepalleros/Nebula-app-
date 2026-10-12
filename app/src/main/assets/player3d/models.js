@@ -267,6 +267,7 @@
 
     const maxArtW=w*(style==='minimal'?.82:.925),maxArtH=h*.82,artSize=Math.min(maxArtW,maxArtH);
     const artX=(w-artSize)/2,artY=h*.055;
+    if(ui.artwork!==false){
     ctx.save();
     ctx.translate(Number(opts.artworkSwipeOffset)||0,0);
     if(style==='neon'){ctx.shadowColor=resolveNeonPalette(opts,accent,tick)[0];ctx.shadowBlur=Math.max(18,w*.055);}
@@ -274,6 +275,7 @@
     else {ctx.shadowColor='rgba(0,0,0,.30)';ctx.shadowBlur=Math.max(10,w*.030);}
     drawArtwork(ctx,art,artX,artY,artSize,artSize,accent,artworkRadius(opts.artworkShape,artSize,artSize,style==='minimal'?8:Math.max(12,w*.035)));
     ctx.restore();
+    }
 
     if(style==='glass'){
       // Sin puntos/decoraciones flotantes alrededor de la portada.

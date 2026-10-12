@@ -406,8 +406,14 @@
                 <TextView android:id="@+id/crossfadeValue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="4.0 s" android:textAppearance="?attr/textAppearanceLabelLarge"/>
                 <SeekBar android:id="@+id/crossfadeSeek" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="120"/>
                 <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/skipSameAlbumSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="No mezclar pistas consecutivas del mismo álbum" android:textAppearance="?attr/textAppearanceBodyMedium"/>
-                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/gaplessSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Reproducción sin cortes (gapless)" android:textAppearance="?attr/textAppearanceBodyMedium"/>
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Gapless usa el mismo motor de transición con duración 0 s." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:id="@+id/gaplessCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/gaplessSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Reproducción sin cortes (gapless)" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Reproduce canciones consecutivas sin silencios entre ellas." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -729,6 +735,60 @@
                     android:text="›"
                     android:textAppearance="?attr/textAppearanceHeadlineSmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/writeTagsToFilesCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/space_16"
+            android:layout_marginTop="@dimen/space_8"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardCornerRadius="@dimen/radius_16"
+            app:cardElevation="@dimen/elevation_flat"
+            app:cardBackgroundColor="?attr/colorSurface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:minHeight="@dimen/music_row_height"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/space_20"
+                android:paddingEnd="@dimen/space_16"
+                android:paddingTop="@dimen/space_16"
+                android:paddingBottom="@dimen/space_16">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Guardar cambios también en el archivo"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:text="Escribe título, artista, álbum y portada en archivos MP3 y M4A."
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/writeTagsToFilesSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_8"
+                    android:contentDescription="Guardar cambios también en el archivo" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

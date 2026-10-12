@@ -33,6 +33,7 @@ public class SettingsFragment extends Fragment implements ListAppearance.Listene
     public static final String CATEGORY_NAVIGATION = "navigation";
     public static final String CATEGORY_PLAYER = "player";
     public static final String CATEGORY_AUDIO = "audio";
+    public static final String CATEGORY_LYRICS = "lyrics";
     public static final String CATEGORY_RADIO = "radio";
     public static final String CATEGORY_LIBRARY = "library";
     public static final String CATEGORY_BATTERY = "battery";
@@ -74,6 +75,7 @@ public class SettingsFragment extends Fragment implements ListAppearance.Listene
         addCategory(CATEGORY_APPEARANCE, "Apariencia", R.drawable.ic_settings);
         addCategory(CATEGORY_NAVIGATION, "Navegación", R.drawable.ic_home);
         addCategory(CATEGORY_PLAYER, "Reproductor", R.drawable.ic_player_skin);
+        addCategory(CATEGORY_LYRICS, "Letras", R.drawable.ic_lyrics);
         addCategory(CATEGORY_AUDIO, "Audio", R.drawable.ic_notification_music);
         addCategory(CATEGORY_RADIO, "Radio", R.drawable.ic_radio);
         addCategory(CATEGORY_LIBRARY, "Biblioteca", R.drawable.ic_library);
@@ -117,6 +119,7 @@ public class SettingsFragment extends Fragment implements ListAppearance.Listene
             case CATEGORY_NAVIGATION:
                 return startPageName(AppPreferences.getStartPage(requireContext())) + " · Pestañas "
                         + (AppPreferences.TABS_BOTTOM.equals(AppPreferences.getMusicTabsPosition(requireContext())) ? "abajo" : "arriba");
+            case CATEGORY_LYRICS: return "Visor, karaoke y LRCLIB";
             case CATEGORY_PLAYER:
                 return styleName(AppPreferences.getPlayerStyle(requireContext())) + " · "
                         + (AppPreferences.useLargeArtwork(requireContext()) ? "Portada grande" : "Portada compacta");
@@ -175,6 +178,7 @@ public class SettingsFragment extends Fragment implements ListAppearance.Listene
         switch (category) {
             case CATEGORY_NAVIGATION: return R.color.settings_category_navigation;
             case CATEGORY_PLAYER: return R.color.settings_category_player;
+            case CATEGORY_LYRICS: return R.color.settings_category_player;
             case CATEGORY_AUDIO: return R.color.settings_category_audio;
             case CATEGORY_RADIO: return R.color.settings_category_radio;
             case CATEGORY_LIBRARY: return R.color.settings_category_library;

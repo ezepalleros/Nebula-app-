@@ -37,6 +37,7 @@ public class RadioFragment extends Fragment {
     private String radioConnectionMediaId = "";
     private String radioConnectionError = "";
     private final ListAppearance.Listener listAppearanceListener = () -> {
+        radioViewModel.refreshFavorites();
         if (binding != null) applyAdaptiveRadioSurface();
     };
     private final SharedPreferences.OnSharedPreferenceChangeListener radioPreferenceListener = (prefs, key) -> {
@@ -162,6 +163,7 @@ public class RadioFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        radioViewModel.refreshFavorites();
         if (binding != null) applyAdaptiveRadioSurface();
     }
 

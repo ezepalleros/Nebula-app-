@@ -107,6 +107,7 @@
     if(longPressFired)return;
     const p=normalized(e);const r=canvas.getBoundingClientRect();const action=PlayerModels.get2DControlAt(style,p.x,p.y,r.width/Math.max(1,r.height),{favoriteVisible,queueVisible});
     if(action&&((action.cmd!=='shuffle'||ui.shuffle)&&(action.cmd!=='repeat'||ui.repeat)&&(action.cmd!=='seek'||ui.progress)))send(action.cmd,action);
+    else if(!action && p.y < (style==='spotify2d' ? .70 : .82)) send('lyrics');
   });
   canvas.addEventListener('pointercancel',()=>{markInteraction();schedule();if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=0;}});
   window.addEventListener('resize',()=>{render();schedule();});

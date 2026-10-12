@@ -93,15 +93,23 @@ public class SettingsDetailFragment extends Fragment {
         });
         bindSwitches(prefs);
         configureCategoryVisibility();
-        if (SettingsFragment.CATEGORY_PLAYER.equals(category)) setupPreviewWebViews();
+        if (SettingsFragment.CATEGORY_PLAYER.equals(category)) {
+            setupPreviewWebViews();
+            
+        }
         refreshSummary();
 
+        if (SettingsFragment.CATEGORY_LYRICS.equals(category)) {
+            LyricsDownloadSettingsController.attach(this, binding.settingsHeader);
+            LyricsViewerSettingsController.attach(requireContext(), binding.settingsHeader);
+        }
         if (SettingsFragment.CATEGORY_AUDIO.equals(category)) setupAudioSettings();
         if (SettingsFragment.CATEGORY_AUDIO.equals(category) || SettingsFragment.CATEGORY_RADIO.equals(category)) {
             playbackOrderSettings = new PlaybackOrderSettingsController(requireContext(), binding);
             playbackOrderSettings.attach();
         }
         if (SettingsFragment.CATEGORY_LIBRARY.equals(category)) {
+            WriteTagsSettingsController.attach(requireContext(), binding.writeTagsToFilesCard, binding.writeTagsToFilesSwitch);
             librarySourceFoldersController = new LibrarySourceFoldersController(requireContext(), binding.librarySourceFoldersContainer);
             librarySourceFoldersController.refresh();
         }
@@ -248,7 +256,7 @@ public class SettingsDetailFragment extends Fragment {
             case SettingsFragment.CATEGORY_AUDIO:
                 show(binding.playbackOrderCard, binding.songOrderLabel,
                         binding.songShuffleSwitch, binding.songRepeatButton,
-                        binding.transitionsLabel, binding.fadeCard, binding.crossfadeCard,
+                        binding.transitionsLabel, binding.fadeCard, binding.crossfadeCard, binding.gaplessCard,
                         binding.volumeLabel, binding.normalizationCard, binding.djSectionLabel, binding.djCard);
                 hide(binding.radioOrderLabel, binding.radioShuffleSwitch, binding.radioRepeatButton,
                         binding.radioOrderHelp, binding.orderDivider);
@@ -262,7 +270,7 @@ public class SettingsDetailFragment extends Fragment {
                 break;
             case SettingsFragment.CATEGORY_LIBRARY:
                 show(binding.librarySectionLabel, binding.libraryGroupingRow, binding.hideWhatsAppAudioCard,
-                        binding.librarySourceFoldersCard);
+                        binding.librarySourceFoldersCard, binding.writeTagsToFilesCard);
                 break;
             case SettingsFragment.CATEGORY_BATTERY:
                 // The controller inserts the battery card below the header.
@@ -282,7 +290,7 @@ public class SettingsDetailFragment extends Fragment {
                 binding.equalizerSkinBackgroundRow, binding.equalizerSkinBarsRow, binding.fftIntensityCard,
                 binding.accentRow, binding.animationRow, binding.backgroundRow, binding.playerBackgroundColorsRow, binding.typographyRow,
                 binding.audioSectionLabel, binding.playbackOrderCard,
-                binding.transitionsLabel, binding.fadeCard, binding.crossfadeCard,
+                binding.transitionsLabel, binding.fadeCard, binding.crossfadeCard, binding.gaplessCard,
                 binding.volumeLabel, binding.normalizationCard, binding.djSectionLabel, binding.djCard,
                 binding.applicationSectionLabel, binding.startPageRow, binding.tabsRow, binding.navigationRow,
                 binding.themeRow, binding.appBackgroundSectionLabel, binding.appBackgroundPreviewCard,
@@ -292,7 +300,7 @@ public class SettingsDetailFragment extends Fragment {
                 binding.miniSubtitleCard, binding.miniPlayerBackgroundCard,
                 binding.radioStationCountCard, binding.radioFavoritesWrapCard,
                 binding.librarySectionLabel, binding.libraryGroupingRow, binding.hideWhatsAppAudioCard,
-                binding.librarySourceFoldersCard);
+                binding.librarySourceFoldersCard, binding.writeTagsToFilesCard);
     }
 
     private void show(View... views) { for (View v : views) if (v != null) v.setVisibility(View.VISIBLE); }
@@ -302,6 +310,7 @@ public class SettingsDetailFragment extends Fragment {
         switch (category) {
             case SettingsFragment.CATEGORY_NAVIGATION: return "Navegación";
             case SettingsFragment.CATEGORY_PLAYER: return "Reproductor";
+            case SettingsFragment.CATEGORY_LYRICS: return "Letras";
             case SettingsFragment.CATEGORY_AUDIO: return "Audio";
             case SettingsFragment.CATEGORY_RADIO: return "Radio";
             case SettingsFragment.CATEGORY_LIBRARY: return "Biblioteca";
@@ -314,6 +323,7 @@ public class SettingsDetailFragment extends Fragment {
         switch (category) {
             case SettingsFragment.CATEGORY_NAVIGATION: return "Qué se muestra y cómo te movés por la app.";
             case SettingsFragment.CATEGORY_PLAYER: return "Solo cambia la pantalla Reproduciendo.";
+            case SettingsFragment.CATEGORY_LYRICS: return "Visualización y búsqueda de letras.";
             case SettingsFragment.CATEGORY_AUDIO: return "Canciones, transiciones, volumen y DJ Loquendo.";
             case SettingsFragment.CATEGORY_RADIO: return "Orden y repetición independientes de Canciones.";
             case SettingsFragment.CATEGORY_LIBRARY: return "Elegí cómo aparecen los agrupamientos de tu música.";
@@ -364,9 +374,11 @@ public class SettingsDetailFragment extends Fragment {
         binding.djProbabilitySeek.setProgress(AudioPreferences.djProbability(requireContext()));
         bindingAudio = false;
         refreshAudioStatus();
+        updateAudioDependentControls();
 
         binding.fadePauseSwitch.setOnCheckedChangeListener((button, checked) -> {
             if (!bindingAudio) audioPrefs.edit().putBoolean(AudioPreferences.KEY_FADE_PAUSE_ENABLED, checked).commit();
+            updateAudioDependentControls();
         });
         binding.fadePauseSeek.setOnSeekBarChangeListener(simpleSeek(progress -> {
             int ms = 200 + progress;
@@ -375,6 +387,7 @@ public class SettingsDetailFragment extends Fragment {
         }));
         binding.crossfadeSwitch.setOnCheckedChangeListener((button, checked) -> {
             if (!bindingAudio) audioPrefs.edit().putBoolean(AudioPreferences.KEY_CROSSFADE_ENABLED, checked).commit();
+            updateAudioDependentControls();
         });
         binding.crossfadeSeek.setOnSeekBarChangeListener(simpleSeek(progress -> {
             int ms = progress * 100;
@@ -389,6 +402,7 @@ public class SettingsDetailFragment extends Fragment {
         });
         binding.normalizationSwitch.setOnCheckedChangeListener((button, checked) -> {
             if (!bindingAudio) audioPrefs.edit().putBoolean(AudioPreferences.KEY_NORMALIZATION_ENABLED, checked).commit();
+            updateAudioDependentControls();
         });
         binding.normalizationTargetGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (bindingAudio || checkedIds.isEmpty()) return;
@@ -400,6 +414,7 @@ public class SettingsDetailFragment extends Fragment {
         });
         binding.djLoquendoSwitch.setOnCheckedChangeListener((button, checked) -> {
             if (!bindingAudio) audioPrefs.edit().putBoolean(AudioPreferences.KEY_DJ_ENABLED, checked).commit();
+            updateAudioDependentControls();
         });
         binding.djProbabilitySeek.setOnSeekBarChangeListener(simpleSeek(progress -> {
             audioPrefs.edit().putInt(AudioPreferences.KEY_DJ_PROBABILITY, progress).commit();
@@ -426,10 +441,45 @@ public class SettingsDetailFragment extends Fragment {
         };
     }
 
+    /** Sincroniza el aspecto y la interacción con las preferencias al entrar y al cambiar switches. */
+    private void updateAudioDependentControls() {
+        if (binding == null) return;
+        updateCrossfadeDependentControls();
+        setAudioDependentState(binding.fadePauseSeek, binding.fadePauseSwitch.isChecked());
+        setAudioDependentState(binding.fadePauseValue, binding.fadePauseSwitch.isChecked());
+        boolean normalization = binding.normalizationSwitch.isChecked();
+        setAudioDependentState(binding.normalizationTargetGroup, normalization);
+        setAudioDependentState(binding.normalizationSoft, normalization);
+        setAudioDependentState(binding.normalizationNormal, normalization);
+        setAudioDependentState(binding.normalizationLoud, normalization);
+        // Analizar es una acción independiente: sigue disponible aun sin normalización.
+        boolean djEnabled = binding.djLoquendoSwitch.isChecked();
+        setAudioDependentState(binding.djProbabilitySeek, djEnabled);
+        setAudioDependentState(binding.djVoiceButton, djEnabled);
+        setAudioDependentState(binding.djPhrasesButton, djEnabled);
+    }
+
+    private void setAudioDependentState(View view, boolean enabled) {
+        view.setEnabled(enabled);
+        view.setAlpha(enabled ? 1f : 0.45f);
+    }
+
+    private void updateCrossfadeDependentControls() {
+        if (binding == null) return;
+        boolean enabled = binding.crossfadeSwitch.isChecked();
+        binding.crossfadeSeek.setEnabled(enabled);
+        binding.crossfadeSeek.setAlpha(enabled ? 1f : 0.45f);
+        binding.crossfadeValue.setAlpha(enabled ? 1f : 0.45f);
+        binding.skipSameAlbumSwitch.setEnabled(enabled);
+        binding.skipSameAlbumSwitch.setAlpha(enabled ? 1f : 0.45f);
+        // Gapless no depende de Crossfade.
+    }
+
     private void refreshAudioStatus() {
         if (binding == null || audioPrefs == null) return;
         binding.fadePauseValue.setText(AudioPreferences.fadePauseMs(requireContext()) + " ms");
         binding.crossfadeValue.setText(String.format(Locale.getDefault(), "%.1f s", AudioPreferences.crossfadeMs(requireContext()) / 1000f));
+        updateAudioDependentControls();
         int progress = audioPrefs.getInt(AudioPreferences.KEY_ANALYSIS_PROGRESS, 0);
         boolean analysisRunning = audioPrefs.getBoolean(AudioPreferences.KEY_ANALYSIS_RUNNING, false);
         binding.analysisProgress.setProgress(progress);

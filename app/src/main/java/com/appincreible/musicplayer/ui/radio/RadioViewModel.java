@@ -61,6 +61,14 @@ public class RadioViewModel extends AndroidViewModel {
         refreshOverrides();
     }
 
+    /** Reload favorites modified from the now-playing screen. */
+    public void refreshFavorites() {
+        favoritesRepository.load(ids -> {
+            favoriteIds.setValue(ids);
+            applyFilters();
+        });
+    }
+
     public LiveData<List<RadioStation>> getVisibleStations() { return visibleStations; }
     public LiveData<Boolean> getLoading() { return loading; }
     public LiveData<String> getError() { return error; }

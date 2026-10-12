@@ -1,6 +1,20 @@
 package com.appincreible.musicplayer.ui.metadata;
 
 import android.app.Dialog;
+import android.app.Activity;
+import android.app.RecoverableSecurityException;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.provider.MediaStore;
+import android.content.IntentSender;
+import androidx.activity.result.IntentSenderRequest;
+import androidx.core.content.ContextCompat;
+import com.appincreible.musicplayer.metadata.write.AudioTagFileWriter;
+import java.util.Collections;
+import java.util.concurrent.Executors;
+import android.os.Handler;
+import android.os.Looper;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -65,6 +79,22 @@ public class MediaEditorBottomSheet extends BottomSheetDialogFragment {
     private String initialArtwork = "";
     private boolean suppressDirty;
     private boolean userEdited;
+    private MediaOverrideEntity pendingFileChange;
+    private boolean restoringFile;
+    private boolean changeTitle, changeArtist, changeAlbum, changeArtwork;
+    private final Handler fileUi = new Handler(Looper.getMainLooper());
+    private final java.util.concurrent.ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+
+    private final ActivityResultLauncher<IntentSenderRequest> writePermission = registerForActivityResult(
+            new ActivityResultContracts.StartIntentSenderForResult(), result -> {
+                if (result.getResultCode() == Activity.RESULT_OK) performFileOperation();
+                else finishFileOperation(false, "Permiso denegado; cambio guardado solo en la app");
+            });
+    private final ActivityResultLauncher<String> oldWritePermission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), allowed -> {
+                if (allowed) performFileOperation();
+                else finishFileOperation(false, "Permiso denegado; cambio guardado solo en la app");
+            });
 
     private final ActivityResultLauncher<String[]> imagePicker = registerForActivityResult(
             new ActivityResultContracts.OpenDocument(), uri -> {
@@ -191,10 +221,19 @@ public class MediaEditorBottomSheet extends BottomSheetDialogFragment {
         binding.searchArtworkButton.setOnClickListener(v -> searchArtwork(radio));
         binding.cancelButton.setOnClickListener(v -> attemptDismiss());
         binding.saveButton.setOnClickListener(v -> save(mediaKey));
-        binding.resetButton.setOnClickListener(v -> metadataRepository.delete(mediaKey, () -> {
-            sendResult(mediaKey, baseTitle, baseArtist, baseAlbum, baseArtwork, true);
-            dismissAllowingStateLoss();
-        }));
+        binding.resetButton.setOnClickListener(v -> {
+            if (!radio && AudioTagFileWriter.hasOriginalBackup(requireContext(), mediaKey)) {
+                restoringFile = true;
+                pendingFileChange = new MediaOverrideEntity(mediaKey, baseTitle, baseArtist,
+                        baseAlbum, baseArtwork, System.currentTimeMillis());
+                startFileOperation();
+            } else {
+                metadataRepository.delete(mediaKey, () -> {
+                    sendResult(mediaKey, baseTitle, baseArtist, baseAlbum, baseArtwork, true);
+                    dismissAllowingStateLoss();
+                });
+            }
+        });
     }
 
     private void installDirtyTracking() {
@@ -305,16 +344,91 @@ public class MediaEditorBottomSheet extends BottomSheetDialogFragment {
 
     private void save(String mediaKey) {
         MediaOverrideEntity entity = new MediaOverrideEntity(
-                mediaKey,
-                text(binding.titleInput),
-                text(binding.artistInput),
-                text(binding.albumInput),
-                selectedArtwork,
-                System.currentTimeMillis());
+                mediaKey, text(binding.titleInput), text(binding.artistInput),
+                text(binding.albumInput), selectedArtwork, System.currentTimeMillis());
+        boolean fileEnabled = !"radio".equals(value(requireArguments(), ARG_KIND))
+                && AppPreferences.writeTagsToFiles(requireContext());
+        changeTitle = !Objects.equals(initialTitle, entity.title);
+        changeArtist = !Objects.equals(initialArtist, entity.artist);
+        changeAlbum = !Objects.equals(initialAlbum, entity.album);
+        changeArtwork = !Objects.equals(initialArtwork, entity.artworkUri);
         metadataRepository.save(entity, saved -> {
             sendResult(saved.mediaKey, saved.title, saved.artist, saved.album, saved.artworkUri, false);
-            dismissAllowingStateLoss();
+            if (fileEnabled) {
+                pendingFileChange = saved;
+                restoringFile = false;
+                startFileOperation();
+            } else dismissAllowingStateLoss();
         });
+    }
+
+    private void startFileOperation() {
+        if (pendingFileChange == null) return;
+        if (binding != null) {
+            binding.saveButton.setEnabled(false);
+            binding.resetButton.setEnabled(false);
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= 30) {
+                IntentSender sender = MediaStore.createWriteRequest(requireContext().getContentResolver(),
+                        Collections.singletonList(AudioTagFileWriter.uriForKey(pendingFileChange.mediaKey)))
+                        .getIntentSender();
+                writePermission.launch(new IntentSenderRequest.Builder(sender).build());
+            } else if (Build.VERSION.SDK_INT <= 28 && ContextCompat.checkSelfPermission(
+                    requireContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                oldWritePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            } else performFileOperation();
+        } catch (Exception error) {
+            finishFileOperation(false, error.getMessage());
+        }
+    }
+
+    private void performFileOperation() {
+        if (pendingFileChange == null) return;
+        final android.content.Context app = requireContext().getApplicationContext();
+        MediaOverrideEntity item = pendingFileChange;
+        boolean isRestore = restoringFile;
+        fileExecutor.execute(() -> {
+            try {
+                if (isRestore) AudioTagFileWriter.restore(app, item.mediaKey);
+                else AudioTagFileWriter.write(app, item, changeTitle, changeArtist, changeAlbum, changeArtwork);
+                fileUi.post(() -> finishFileOperation(true, null));
+            } catch (Exception error) {
+                if (Build.VERSION.SDK_INT == 29 && error instanceof RecoverableSecurityException) {
+                    IntentSender sender = ((RecoverableSecurityException) error).getUserAction()
+                            .getActionIntent().getIntentSender();
+                    fileUi.post(() -> writePermission.launch(new IntentSenderRequest.Builder(sender).build()));
+                } else fileUi.post(() -> finishFileOperation(false,
+                        error.getMessage() == null ? "No se pudo escribir el archivo" : error.getMessage()));
+            }
+        });
+    }
+
+    private void finishFileOperation(boolean success, String reason) {
+        if (!isAdded()) return;
+        if (success && restoringFile && pendingFileChange != null) {
+            MediaOverrideEntity value = pendingFileChange;
+            metadataRepository.delete(value.mediaKey, () -> {
+                sendResult(value.mediaKey, value.title, value.artist, value.album, value.artworkUri, true);
+                Toast.makeText(requireContext(), "1 archivo restaurado, 0 fallaron", Toast.LENGTH_LONG).show();
+                dismissAllowingStateLoss();
+            });
+            return;
+        }
+        String report = success ? "1 archivo actualizado, 0 fallaron"
+                : "0 archivos actualizados, 1 falló: " + reason;
+        if (!success && restoringFile) report += ". No se restauraron los datos de la app.";
+        Toast.makeText(requireContext(), report, Toast.LENGTH_LONG).show();
+        if (!restoringFile) dismissAllowingStateLoss();
+        else if (binding != null) {
+            binding.saveButton.setEnabled(true);
+            binding.resetButton.setEnabled(true);
+        }
+    }
+
+    @Override public void onDestroy() {
+        fileExecutor.shutdown();
+        super.onDestroy();
     }
 
     private void sendResult(String mediaKey, String title, String artist, String album,
