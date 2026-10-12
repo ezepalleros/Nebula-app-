@@ -8,6 +8,7 @@
   let model=null,labelCanvas=null,labelTexture=null,initialized=false;
   let rotY=0.55,rotX=-0.10,scale=1,autoVel=0.004,userVel=0,touching=false,lastX=0,lastT=0,trackKick=0;
   let raf=0,lastRender=0,lastUpdate=performance.now(),lastInteraction=0,pageVisible=!document.hidden;
+  let artLoadGeneration=0;
 
   function colorHex(v){ if(typeof v==='string')return v; const s=(v>>>0).toString(16).padStart(6,'0');return '#'+s.slice(-6); }
   function is2D(){ return !!style&&PlayerModels.is2DStyle(style); }
@@ -55,11 +56,21 @@
     trackKick=.52;renderNow();schedule();
   }
   function loadArt(done){
-    if(!artData){artImage=null;if(done)done();return;}
+    const generation=++artLoadGeneration;
+    const requestedData=artData;
+    if(!requestedData){artImage=null;if(done)done();return;}
     const img=new Image();
-    img.onload=()=>{artImage=img;if(done)done();};
-    img.onerror=()=>{artImage=null;if(done)done();};
-    img.src=artData;
+    img.onload=()=>{
+      if(generation!==artLoadGeneration||requestedData!==artData)return;
+      artImage=img;
+      if(done)done();
+    };
+    img.onerror=()=>{
+      if(generation!==artLoadGeneration||requestedData!==artData)return;
+      artImage=null;
+      if(done)done();
+    };
+    img.src=requestedData;
   }
   function finishInitialRender(){
     initialized=true;visible=requestedVisible;rebuild();renderNow();notifyReady();
@@ -135,7 +146,7 @@
     setRotationY(v){if(initialized&&!is2D()){rotY=Number(v)||0;userVel=0;renderNow();}},
     setPreviewMode(v){previewMode=!!v;renderNow();schedule();},
     debugState(){return {style,rotY,rotX,playing,touching,userVel,autoVel,visible,previewMode,is2D:is2D(),initialized};},
-    dispose(){requestedVisible=false;visible=false;initialized=false;if(raf)cancelAnimationFrame(raf);raf=0;if(model){model.dispose();model=null;}if(renderer){renderer.dispose();renderer=null;}labelTexture=null;artImage=null;}
+    dispose(){requestedVisible=false;visible=false;initialized=false;artLoadGeneration++;if(raf)cancelAnimationFrame(raf);raf=0;if(model){model.dispose();model=null;}if(renderer){renderer.dispose();renderer=null;}labelTexture=null;artImage=null;}
   };
   syncCanvasVisibility();
 })();

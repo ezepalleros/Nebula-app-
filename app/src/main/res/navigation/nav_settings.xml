@@ -20,6 +20,11 @@
     </fragment>
 
     <fragment
+        android:id="@+id/settingsInfoFragment"
+        android:name="com.appincreible.musicplayer.ui.settings.SettingsInfoFragment"
+        android:label="Información" />
+
+    <fragment
         android:id="@+id/nowPlayingFragment"
         android:name="com.appincreible.musicplayer.ui.player.NowPlayingFragment"
         android:label="Reproduciendo" />

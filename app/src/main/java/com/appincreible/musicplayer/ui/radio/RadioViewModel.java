@@ -65,6 +65,7 @@ public class RadioViewModel extends AndroidViewModel {
     public LiveData<Boolean> getLoading() { return loading; }
     public LiveData<String> getError() { return error; }
     public LiveData<Set<String>> getFavoriteIds() { return favoriteIds; }
+    public boolean isFavoritesOnly() { return favoritesOnly; }
 
     public void loadStations() {
         if (!popularStations.isEmpty()) {

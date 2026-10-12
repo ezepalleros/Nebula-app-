@@ -34,6 +34,58 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/neonSkinColorRow"
+            android:layout_width="match_parent"
+            android:layout_height="76dp"
+            android:layout_marginHorizontal="14dp"
+            android:visibility="gone"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp">
+                <View
+                    android:id="@+id/neonSkinColorPreview"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:background="@drawable/bg_color_preview"/>
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="22dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Color del neón"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView
+                        android:id="@+id/neonSkinColorValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="#8B5CF6"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <com.google.android.material.card.MaterialCardView android:id="@+id/equalizerSkinBackgroundRow" android:layout_width="match_parent" android:layout_height="76dp" android:layout_marginHorizontal="14dp" android:visibility="gone" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
             <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="20dp">
                 <View android:id="@+id/equalizerSkinBackgroundPreview" android:layout_width="38dp" android:layout_height="38dp" android:background="@drawable/bg_color_preview"/>
@@ -328,6 +380,16 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.card.MaterialCardView android:id="@+id/radioFavoritesWrapCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="@dimen/space_16" android:layout_marginTop="@dimen/space_8" app:cardCornerRadius="@dimen/radius_16" app:cardElevation="@dimen/elevation_flat" app:cardBackgroundColor="?attr/colorSurface">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="@dimen/music_row_height" android:orientation="horizontal" android:paddingHorizontal="@dimen/space_20">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Volver al inicio de Favoritas" android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="Al llegar a la última favorita, Siguiente vuelve a la primera." android:textAppearance="?attr/textAppearanceBodySmall" android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/radioFavoritesWrapSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <TextView android:id="@+id/transitionsLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:paddingHorizontal="20dp" android:text="TRANSICIONES" android:textAppearance="?attr/textAppearanceLabelLarge" android:textColor="?attr/colorOnSurfaceVariant" android:textStyle="bold"/><com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface" android:id="@+id/fadeCard">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
                 <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/fadePauseSwitch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Fade al pausar / reanudar" android:textAppearance="?attr/textAppearanceTitleMedium"/>
@@ -487,7 +549,91 @@
             </LinearLayout>
             <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/centerPlayerInfoSwitch" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView><com.google.android.material.card.MaterialCardView android:id="@+id/showBottomNavCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/previousRestartCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/space_16"
+        android:layout_marginTop="@dimen/space_8"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:cardCornerRadius="@dimen/radius_16"
+        app:cardElevation="@dimen/elevation_flat">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="@dimen/music_row_height"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/space_20">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Anterior reinicia la canción"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="Después de 3 s vuelve al inicio; antes de 3 s va a la canción anterior."
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/previousRestartSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/swipeArtworkCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/space_16"
+        android:layout_marginTop="@dimen/space_8"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:cardCornerRadius="@dimen/radius_16"
+        app:cardElevation="@dimen/elevation_flat">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:minHeight="@dimen/music_row_height"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/space_20">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Deslizar portada para cambiar canción"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="Deslizá a la izquierda para siguiente y a la derecha para anterior."
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/swipeArtworkSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView android:id="@+id/showBottomNavCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginHorizontal="14dp" android:layout_marginTop="8dp" app:cardCornerRadius="18dp" app:cardElevation="0dp" app:cardBackgroundColor="?attr/colorSurface">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:minHeight="76dp" android:orientation="horizontal" android:paddingHorizontal="20dp">
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mostrar barra inferior en Reproduciendo" android:textAppearance="?attr/textAppearanceTitleMedium"/>

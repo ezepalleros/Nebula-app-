@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_16"
+        android:paddingEnd="@dimen/space_16"
+        android:paddingBottom="@dimen/space_24">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="@dimen/space_16">
+
+            <ImageButton
+                android:id="@+id/infoBackButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Volver"
+                android:padding="@dimen/space_12"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/infoTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_8"
+                android:layout_weight="1"
+                android:text="Información"
+                android:textAppearance="@style/TextAppearance.AppIncreible.Headline"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/infoSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="56dp"
+            android:layout_marginTop="@dimen/space_4"
+            android:layout_marginBottom="@dimen/space_16"
+            android:text="Versión, actualizaciones, proyecto y apoyo."
+            android:textAppearance="@style/TextAppearance.AppIncreible.Body"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/versionCard"
+            style="@style/Widget.AppIncreible.Card.Adaptive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_8">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/music_row_height"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:padding="@dimen/space_16">
+
+                <TextView
+                    android:id="@+id/versionLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Versión de la app"
+                    android:textAppearance="@style/TextAppearance.AppIncreible.Title" />
+
+                <TextView
+                    android:id="@+id/versionValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="Nebula"
+                    android:textAppearance="@style/TextAppearance.AppIncreible.Body"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/updateCard"
+            style="@style/Widget.AppIncreible.Card.Adaptive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_8"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/music_row_height"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_16">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/updateLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Buscar actualizaciones"
+                        android:textAppearance="@style/TextAppearance.AppIncreible.Title" />
+                    <TextView
+                        android:id="@+id/updateStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:text="Comprobando GitHub Releases…"
+                        android:textAppearance="@style/TextAppearance.AppIncreible.Caption"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="48dp"
+                    android:gravity="center"
+                    android:text="›"
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                    android:textColor="?attr/colorPrimary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/developerCard"
+            style="@style/Widget.AppIncreible.Card.Adaptive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_8">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/music_row_height"
+                android:gravity="center_vertical"
+                android:orientation="vertical"
+                android:padding="@dimen/space_16">
+                <TextView
+                    android:id="@+id/developerLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Desarrollador"
+                    android:textAppearance="@style/TextAppearance.AppIncreible.Title" />
+                <TextView
+                    android:id="@+id/developerValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="Desarrollado por elequiweb"
+                    android:textAppearance="@style/TextAppearance.AppIncreible.Body"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/githubCard"
+            style="@style/Widget.AppIncreible.Card.Adaptive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_16"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/music_row_height"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_16">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/githubLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GitHub"
+                        android:textAppearance="@style/TextAppearance.AppIncreible.Title" />
+                    <TextView
+                        android:id="@+id/githubValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:text="Código fuente y releases de Nebula"
+                        android:textAppearance="@style/TextAppearance.AppIncreible.Caption"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="48dp"
+                    android:gravity="center"
+                    android:text="↗"
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                    android:textColor="?attr/colorPrimary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/space_8"
+            android:text="APOYAR EL PROYECTO"
+            android:textAppearance="?attr/textAppearanceLabelLarge"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/donationCard"
+            style="@style/Widget.AppIncreible.Card.Adaptive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/space_16">
+                <TextView
+                    android:id="@+id/donationLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Donación"
+                    android:textAppearance="@style/TextAppearance.AppIncreible.Title" />
+                <TextView
+                    android:id="@+id/donationHint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:layout_marginBottom="@dimen/space_16"
+                    android:text="Transferencia por alias o CVU."
+                    android:textAppearance="@style/TextAppearance.AppIncreible.Caption"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <TextView android:id="@+id/donationAliasLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alias" android:textAppearance="?attr/textAppearanceLabelLarge" />
+                <TextView android:id="@+id/donationAliasValue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="eze.palleros" android:textAppearance="@style/TextAppearance.AppIncreible.Body" android:textColor="?attr/colorOnSurfaceVariant" android:textIsSelectable="true" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/copyAliasButton" style="@style/Widget.AppIncreible.Button.Secondary" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8" android:text="Copiar alias" />
+
+                <TextView android:id="@+id/donationCvuLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_16" android:text="CVU" android:textAppearance="?attr/textAppearanceLabelLarge" />
+                <TextView android:id="@+id/donationCvuValue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="0000003100067543622083" android:textAppearance="@style/TextAppearance.AppIncreible.Body" android:textColor="?attr/colorOnSurfaceVariant" android:textIsSelectable="true" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/copyCvuButton" style="@style/Widget.AppIncreible.Button.Secondary" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8" android:text="Copiar CVU" />
+
+                <TextView android:id="@+id/donationNameLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_16" android:text="Nombre" android:textAppearance="?attr/textAppearanceLabelLarge" />
+                <TextView android:id="@+id/donationNameValue" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="Ezequiel German Palleros Ibarra" android:textAppearance="@style/TextAppearance.AppIncreible.Body" android:textColor="?attr/colorOnSurfaceVariant" android:textIsSelectable="true" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

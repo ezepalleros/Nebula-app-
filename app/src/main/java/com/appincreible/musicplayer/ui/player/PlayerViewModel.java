@@ -114,6 +114,10 @@ public class PlayerViewModel extends AndroidViewModel implements PlayerControlle
     }
 
     public void playRadioQueue(List<RadioStation> stations, int startIndex) {
+        playRadioQueue(stations, startIndex, false);
+    }
+
+    public void playRadioQueue(List<RadioStation> stations, int startIndex, boolean favoritesQueue) {
         if (stations == null || stations.isEmpty()) return;
         int selectedSourceIndex = Math.max(0, Math.min(startIndex, stations.size() - 1));
         RadioStation selectedStation = stations.get(selectedSourceIndex);
@@ -140,7 +144,7 @@ public class PlayerViewModel extends AndroidViewModel implements PlayerControlle
             if (mimeType != null) builder.setMimeType(mimeType);
             items.add(builder.build());
         }
-        if (!items.isEmpty()) playerController.playRadioQueue(items, selectedQueueIndex);
+        if (!items.isEmpty()) playerController.playRadioQueue(items, selectedQueueIndex, favoritesQueue);
     }
 
     public void applyCurrentMetadata(String key, String newTitle, String newArtist,

@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -76,6 +77,11 @@ public class MusicFragment extends Fragment {
     private String searchQuery = "";
     private final ListAppearance.Listener listAppearanceListener = () -> {
         if (binding != null) applyAdaptiveMusicSurface();
+    };
+    private final SharedPreferences.OnSharedPreferenceChangeListener tabsPreferenceListener = (prefs, key) -> {
+        if (binding != null && AppPreferences.KEY_MUSIC_TABS_POSITION.equals(key)) {
+            applyTabsPosition();
+        }
     };
 
     private final ActivityResultLauncher<String> permissionLauncher = registerForActivityResult(
@@ -166,6 +172,7 @@ public class MusicFragment extends Fragment {
         playlistTouchHelper.attachToRecyclerView(binding.playlistList);
 
         setupTabs();
+        AppPreferences.prefs(requireContext()).registerOnSharedPreferenceChangeListener(tabsPreferenceListener);
         ListAppearance.addListener(listAppearanceListener);
         applyAdaptiveMusicSurface();
         binding.permissionButton.setOnClickListener(v -> requestAudioPermission());
@@ -267,9 +274,16 @@ public class MusicFragment extends Fragment {
     private void setupTabs() {
         setupTabLayout(binding.tabsTop);
         setupTabLayout(binding.tabsBottom);
+        applyTabsPosition();
+    }
+
+    private void applyTabsPosition() {
+        if (binding == null) return;
+        boolean selecting = binding.selectionHeader.getVisibility() == View.VISIBLE;
         boolean bottom = AppPreferences.TABS_BOTTOM.equals(AppPreferences.getMusicTabsPosition(requireContext()));
-        binding.tabsTop.setVisibility(bottom ? View.GONE : View.VISIBLE);
-        binding.tabsBottom.setVisibility(bottom ? View.VISIBLE : View.GONE);
+        binding.tabsTop.setVisibility(selecting || bottom ? View.GONE : View.VISIBLE);
+        binding.tabsBottom.setVisibility(selecting || !bottom ? View.GONE : View.VISIBLE);
+        if (!selecting) syncTabs(currentSection);
     }
 
     private void setupTabLayout(TabLayout tabs) {
@@ -381,8 +395,7 @@ public class MusicFragment extends Fragment {
         binding.addSelectedButton.setEnabled(selecting);
         binding.hideSelectedButton.setEnabled(selecting);
         binding.deleteSelectedButton.setEnabled(selecting);
-        binding.tabsTop.setVisibility(selecting ? View.GONE : (AppPreferences.TABS_TOP.equals(AppPreferences.getMusicTabsPosition(requireContext())) ? View.VISIBLE : View.GONE));
-        binding.tabsBottom.setVisibility(selecting ? View.GONE : (AppPreferences.TABS_BOTTOM.equals(AppPreferences.getMusicTabsPosition(requireContext())) ? View.VISIBLE : View.GONE));
+        applyTabsPosition();
         if (selecting) binding.selectionTitle.setText("Se seleccionó " + count);
     }
 
@@ -397,8 +410,48 @@ public class MusicFragment extends Fragment {
         super.onResume();
         if (binding != null) {
             applyLibraryGroupingUi();
+            applyTabsPosition();
             applyAdaptiveMusicSurface();
+            consumeLocateSongRequest();
         }
+    }
+
+    private void consumeLocateSongRequest() {
+        if (binding == null || musicViewModel == null || songAdapter == null) return;
+        String mediaKey = musicViewModel.consumeLocateSongRequest();
+        if (mediaKey == null || mediaKey.isEmpty()) return;
+
+        searchQuery = "";
+        binding.searchInput.setText("");
+        binding.searchInput.clearFocus();
+        binding.searchInputLayout.setVisibility(View.GONE);
+
+        if (currentSection != SECTION_TRACKS) {
+            switchSection(SECTION_TRACKS);
+        }
+
+        List<Song> source = valueOrEmpty(musicViewModel.getSongs().getValue());
+        currentSource = new ArrayList<>(source);
+        List<Song> sorted = buildDisplaySongs(source);
+        songAdapter.submitList(sorted, () -> {
+            if (binding == null) return;
+            int target = -1;
+            List<Song> displayed = songAdapter.getCurrentList();
+            for (int i = 0; i < displayed.size(); i++) {
+                if (mediaKey.equals(displayed.get(i).getMediaKey())) {
+                    target = i;
+                    break;
+                }
+            }
+            if (target < 0) return;
+            RecyclerView.LayoutManager manager = binding.songList.getLayoutManager();
+            if (manager instanceof LinearLayoutManager) {
+                int offset = Math.max(0, binding.songList.getHeight() / 3);
+                ((LinearLayoutManager) manager).scrollToPositionWithOffset(target, offset);
+            } else {
+                binding.songList.scrollToPosition(target);
+            }
+        });
     }
 
     private void applyAdaptiveMusicSurface() {
@@ -768,6 +821,7 @@ public class MusicFragment extends Fragment {
     private List<PlaylistEntity> valueOrEmptyPlaylists(List<PlaylistEntity> value) { return value == null ? Collections.emptyList() : value; }
 
     @Override public void onDestroyView() {
+        AppPreferences.prefs(requireContext()).unregisterOnSharedPreferenceChangeListener(tabsPreferenceListener);
         ListAppearance.removeListener(listAppearanceListener);
         activePlaylistEditor = null;
         playlistTouchHelper = null;

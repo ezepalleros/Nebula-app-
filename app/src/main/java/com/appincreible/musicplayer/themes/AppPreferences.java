@@ -26,8 +26,11 @@ public final class AppPreferences {
     public static final String KEY_SHOW_MINI_SUBTITLE = "show_mini_subtitle";
     public static final String KEY_MINI_PLAYER_USE_PLAYER_BACKGROUND = "mini_player_use_player_background";
     public static final String KEY_SHOW_RADIO_STATION_COUNT = "show_radio_station_count";
+    public static final String KEY_RADIO_FAVORITES_WRAP = "radio_favorites_wrap";
     public static final String KEY_LARGE_ARTWORK = "large_artwork";
     public static final String KEY_CENTER_PLAYER_INFO = "center_player_info";
+    public static final String KEY_PREVIOUS_RESTART_AFTER_3S = "previous_restart_after_3s";
+    public static final String KEY_SWIPE_ARTWORK_TO_CHANGE_TRACK = "swipe_artwork_to_change_track";
 
     public static final String KEY_SHOW_PLAYER_BACK_BUTTON = "show_player_back_button";
     public static final String KEY_SHOW_PLAYER_HEADER_LABEL = "show_player_header_label";
@@ -160,6 +163,11 @@ public final class AppPreferences {
     public static final String KEY_EQUALIZER_SKIN_BARS_COLOR = "equalizer_skin_bars_color";
     public static final String KEY_RING_SKIN_BACKGROUND_COLOR = "ring_skin_background_color";
     public static final String KEY_RING_SKIN_COLOR = "ring_skin_color";
+    public static final String KEY_NEON_SKIN_COLOR = "neon_skin_color"; // legacy single-color value
+    public static final String KEY_NEON_SKIN_COLOR_MODE = "neon_skin_color_mode";
+    public static final String KEY_NEON_SKIN_COLOR_1 = "neon_skin_color_1";
+    public static final String KEY_NEON_SKIN_COLOR_2 = "neon_skin_color_2";
+    public static final String KEY_NEON_SKIN_COLOR_3 = "neon_skin_color_3";
     public static final String KEY_EQUALIZER_SKIN_INTENSITY = "equalizer_skin_intensity";
     public static final String KEY_RING_SKIN_INTENSITY = "ring_skin_intensity";
 
@@ -212,8 +220,11 @@ public final class AppPreferences {
     public static boolean showMiniSubtitle(Context context) { return prefs(context).getBoolean(KEY_SHOW_MINI_SUBTITLE, true); }
     public static boolean miniPlayerUsesPlayerBackground(Context context) { return prefs(context).getBoolean(KEY_MINI_PLAYER_USE_PLAYER_BACKGROUND, true); }
     public static boolean showRadioStationCount(Context context) { return prefs(context).getBoolean(KEY_SHOW_RADIO_STATION_COUNT, false); }
+    public static boolean radioFavoritesWrap(Context context) { return prefs(context).getBoolean(KEY_RADIO_FAVORITES_WRAP, false); }
     public static boolean useLargeArtwork(Context context) { return prefs(context).getBoolean(KEY_LARGE_ARTWORK, true); }
     public static boolean centerPlayerInfo(Context context) { return prefs(context).getBoolean(KEY_CENTER_PLAYER_INFO, false); }
+    public static boolean previousRestartsAfterThreeSeconds(Context context) { return prefs(context).getBoolean(KEY_PREVIOUS_RESTART_AFTER_3S, false); }
+    public static boolean swipeArtworkToChangeTrack(Context context) { return prefs(context).getBoolean(KEY_SWIPE_ARTWORK_TO_CHANGE_TRACK, true); }
     public static boolean showPlayerBackButton(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_BACK_BUTTON, true); }
     public static boolean showPlayerHeaderLabel(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_HEADER_LABEL, true); }
     public static boolean showPlayerMusicButton(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_MUSIC_BUTTON, true); }
@@ -589,6 +600,62 @@ public final class AppPreferences {
     public static void setRingSkinColor(Context context, int color) {
         prefs(context).edit().putInt(KEY_RING_SKIN_COLOR,
                 Color.rgb(Color.red(color), Color.green(color), Color.blue(color))).commit();
+    }
+
+    public static String getNeonSkinColorMode(Context context) {
+        String mode = prefs(context).getString(KEY_NEON_SKIN_COLOR_MODE, APP_BACKGROUND_COLOR_ACCENT);
+        if (APP_BACKGROUND_COLOR_ACCENT.equals(mode) || PLAYER_BACKGROUND_COLOR_ARTWORK.equals(mode)
+                || APP_BACKGROUND_COLOR_SOLID.equals(mode) || APP_BACKGROUND_COLOR_GRADIENT_2.equals(mode)
+                || APP_BACKGROUND_COLOR_GRADIENT_3.equals(mode) || PLAYER_BACKGROUND_COLOR_RAINBOW.equals(mode)) {
+            return mode;
+        }
+        return APP_BACKGROUND_COLOR_ACCENT;
+    }
+
+    public static int getNeonSkinColor1(Context context) {
+        if (prefs(context).contains(KEY_NEON_SKIN_COLOR_1)) {
+            return prefs(context).getInt(KEY_NEON_SKIN_COLOR_1, getPlayerAccentColor(context));
+        }
+        if (prefs(context).contains(KEY_NEON_SKIN_COLOR)) {
+            return prefs(context).getInt(KEY_NEON_SKIN_COLOR, getPlayerAccentColor(context));
+        }
+        return getPlayerAccentColor(context);
+    }
+
+    public static int getNeonSkinColor2(Context context) {
+        return prefs(context).getInt(KEY_NEON_SKIN_COLOR_2, getNeonSkinColor1(context));
+    }
+
+    public static int getNeonSkinColor3(Context context) {
+        return prefs(context).getInt(KEY_NEON_SKIN_COLOR_3, getNeonSkinColor2(context));
+    }
+
+    public static int getNeonSkinColor(Context context) {
+        String mode = getNeonSkinColorMode(context);
+        if (APP_BACKGROUND_COLOR_ACCENT.equals(mode)) return getPlayerAccentColor(context);
+        return getNeonSkinColor1(context);
+    }
+
+    public static void setNeonSkinPalette(Context context, String mode, int c1, int c2, int c3) {
+        String safeMode = APP_BACKGROUND_COLOR_ACCENT.equals(mode) || PLAYER_BACKGROUND_COLOR_ARTWORK.equals(mode)
+                || APP_BACKGROUND_COLOR_SOLID.equals(mode) || APP_BACKGROUND_COLOR_GRADIENT_2.equals(mode)
+                || APP_BACKGROUND_COLOR_GRADIENT_3.equals(mode) || PLAYER_BACKGROUND_COLOR_RAINBOW.equals(mode)
+                ? mode : APP_BACKGROUND_COLOR_ACCENT;
+        SharedPreferences.Editor editor = prefs(context).edit()
+                .putString(KEY_NEON_SKIN_COLOR_MODE, safeMode)
+                .putInt(KEY_NEON_SKIN_COLOR_1, opaqueColor(c1))
+                .putInt(KEY_NEON_SKIN_COLOR_2, opaqueColor(c2))
+                .putInt(KEY_NEON_SKIN_COLOR_3, opaqueColor(c3));
+        editor.commit();
+    }
+
+    public static void setNeonSkinColor(Context context, int color) {
+        int safe = opaqueColor(color);
+        setNeonSkinPalette(context, APP_BACKGROUND_COLOR_SOLID, safe, safe, safe);
+    }
+
+    private static int opaqueColor(int color) {
+        return Color.rgb(Color.red(color), Color.green(color), Color.blue(color));
     }
 
     public static int getEqualizerSkinIntensity(Context context) {

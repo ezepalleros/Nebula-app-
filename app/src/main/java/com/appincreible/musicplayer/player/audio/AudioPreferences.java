@@ -46,7 +46,7 @@ public final class AudioPreferences {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    public static boolean fadePauseEnabled(Context c) { return prefs(c).getBoolean(KEY_FADE_PAUSE_ENABLED, true); }
+    public static boolean fadePauseEnabled(Context c) { return prefs(c).getBoolean(KEY_FADE_PAUSE_ENABLED, false); }
     public static int fadePauseMs(Context c) { return clamp(prefs(c).getInt(KEY_FADE_PAUSE_MS, 300), 200, 1000); }
     public static boolean crossfadeEnabled(Context c) { return !PowerSaverManager.isActive(c) && prefs(c).getBoolean(KEY_CROSSFADE_ENABLED, false); }
     public static int crossfadeMs(Context c) { return clamp(prefs(c).getInt(KEY_CROSSFADE_MS, 4000), 0, 12000); }

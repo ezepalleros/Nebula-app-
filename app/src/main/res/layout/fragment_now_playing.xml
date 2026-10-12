@@ -130,6 +130,7 @@
                 android:max="1000" />
 
             <LinearLayout
+                android:id="@+id/progressTimesRow"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
@@ -152,6 +153,42 @@
                     android:text="0:00"
                     android:textAppearance="?attr/textAppearanceLabelMedium" />
             </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/radioStatusCard"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/ui_scrim_light_24"
+                app:cardCornerRadius="@dimen/radius_16"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="44dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_16"
+                    android:paddingEnd="@dimen/space_16">
+
+                    <View
+                        android:id="@+id/radioStatusDot"
+                        android:layout_width="@dimen/space_8"
+                        android:layout_height="@dimen/space_8"
+                        android:background="@drawable/bg_color_preview" />
+
+                    <TextView
+                        android:id="@+id/radioStatusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_8"
+                        android:text="EN VIVO"
+                        android:textAppearance="?attr/textAppearanceLabelLarge"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <LinearLayout
                 android:layout_width="match_parent"

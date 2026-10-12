@@ -49,6 +49,7 @@ public class RadioStationAdapter extends ListAdapter<RadioStation, RadioStationA
     private boolean hasAdaptiveColors;
     private String connectionMediaKey = "";
     private int connectionState = PlayerController.RADIO_CONNECTION_IDLE;
+    private String activeMediaKey = "";
 
     public RadioStationAdapter(Listener listener) {
         super(DIFF);
@@ -74,6 +75,13 @@ public class RadioStationAdapter extends ListAdapter<RadioStation, RadioStationA
         connectionState = state;
         notifyConnectionRow(oldKey);
         if (!connectionMediaKey.equals(oldKey)) notifyConnectionRow(connectionMediaKey);
+    }
+
+    public void setActiveMediaKey(String mediaKey) {
+        String oldKey = activeMediaKey;
+        activeMediaKey = mediaKey == null ? "" : mediaKey;
+        notifyConnectionRow(oldKey);
+        if (!activeMediaKey.equals(oldKey)) notifyConnectionRow(activeMediaKey);
     }
 
     private void notifyConnectionRow(String mediaKey) {
@@ -134,9 +142,21 @@ public class RadioStationAdapter extends ListAdapter<RadioStation, RadioStationA
             int primary = hasAdaptiveColors ? adaptivePrimary : binding.stationName.getCurrentTextColor();
             int secondary = hasAdaptiveColors ? adaptiveSecondary : binding.stationInfo.getCurrentTextColor();
 
-            binding.getRoot().setCardBackgroundColor(Color.TRANSPARENT);
+            boolean active = station.getMediaKey().equals(activeMediaKey);
+            binding.getRoot().setCardBackgroundColor(active
+                    ? ColorUtils.setAlphaComponent(adaptiveAccent, 34)
+                    : Color.TRANSPARENT);
+            binding.getRoot().setStrokeColor(active
+                    ? ColorUtils.setAlphaComponent(adaptiveAccent, 150)
+                    : Color.TRANSPARENT);
+            binding.getRoot().setStrokeWidth(active
+                    ? Math.max(1, Math.round(binding.getRoot().getResources().getDisplayMetrics().density))
+                    : 0);
+            binding.getRoot().setRadius(active
+                    ? binding.getRoot().getResources().getDimension(R.dimen.radius_16)
+                    : 0f);
             binding.stationName.setText(station.getName());
-            binding.stationName.setTextColor(primary);
+            binding.stationName.setTextColor(active ? adaptiveAccent : primary);
             if (station.getMediaKey().equals(connectionMediaKey)
                     && connectionState == PlayerController.RADIO_CONNECTION_CONNECTING) {
                 binding.stationInfo.setText("Conectando…");

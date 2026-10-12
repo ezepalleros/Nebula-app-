@@ -1,18 +1,26 @@
 package com.appincreible.musicplayer.ui.player;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.PendingIntent;
+import android.content.ContentResolver;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
@@ -21,8 +29,14 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.IntentSenderRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.activity.OnBackPressedCallback;
@@ -34,6 +48,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.widget.NestedScrollView;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.Player;
+import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -42,6 +57,7 @@ import com.appincreible.musicplayer.data.model.Song;
 import com.appincreible.musicplayer.MainActivity;
 import com.appincreible.musicplayer.power.PowerSaverManager;
 import com.appincreible.musicplayer.player.audio.EqualizerSpectrum;
+import com.appincreible.musicplayer.player.controller.PlayerController;
 import com.appincreible.musicplayer.databinding.FragmentNowPlayingBinding;
 import com.appincreible.musicplayer.themes.AppPreferences;
 import com.appincreible.musicplayer.themes.AppTypography;
@@ -49,8 +65,10 @@ import com.appincreible.musicplayer.themes.UiPalette;
 import com.appincreible.musicplayer.ui.metadata.MediaEditorBottomSheet;
 import com.appincreible.musicplayer.ui.music.MusicViewModel;
 import com.bumptech.glide.Glide;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.imageview.ShapeableImageView;
-import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.shape.ShapeAppearanceModel;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.transition.Transition;
@@ -58,6 +76,7 @@ import com.bumptech.glide.request.transition.Transition;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -72,11 +91,13 @@ public class NowPlayingFragment extends Fragment {
     private boolean shuffleEnabled;
     private int repeatMode = Player.REPEAT_MODE_OFF;
     private boolean radioMedia;
+    private int radioConnectionState = PlayerController.RADIO_CONNECTION_IDLE;
     private boolean playing;
     private boolean immersive2d;
     private boolean rendererTwoDimensional;
     private boolean rendererReady;
     private boolean rendererContentReady;
+    private boolean rendererRefreshInPlace;
     private boolean hasMedia;
     private boolean artworkResolved;
     private int rendererGeneration;
@@ -90,6 +111,7 @@ public class NowPlayingFragment extends Fragment {
     private ShapeableImageView staticPlayerImage;
     private WebView rendererWeb;
     private Song currentSong;
+    private Song pendingDeleteSong;
     private UiPalette currentPalette;
     private int playerContentColor = Color.WHITE;
     private int playerSecondaryColor = Color.WHITE;
@@ -99,6 +121,21 @@ public class NowPlayingFragment extends Fragment {
     private QueueBottomSheet.QueueAdapter inlineQueueAdapter;
     private boolean queueExpanded;
     private int statusBarInsetTop;
+    private float artworkSwipeDownX;
+    private float artworkSwipeDownY;
+    private boolean artworkSwipeCandidate;
+    private boolean artworkSwipeTransitionRunning;
+    private View pendingArtworkSwipeView;
+    private int pendingArtworkSwipeDuration;
+
+    private final ActivityResultLauncher<IntentSenderRequest> deleteCurrentSongLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartIntentSenderForResult(), result -> {
+                Song deleted = pendingDeleteSong;
+                pendingDeleteSong = null;
+                if (result.getResultCode() == Activity.RESULT_OK && deleted != null && isAdded()) {
+                    skipThenCleanupDeletedSong(deleted);
+                }
+            });
 
     @Nullable
     @Override
@@ -209,6 +246,7 @@ public class NowPlayingFragment extends Fragment {
             binding.playPause.setIconResource(playing ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
             eval3d("Player3D.setPlaying(" + playing + ")");
             eval2d("Player2D.setPlaying(" + playing + ")");
+            updateRadioStatusUi();
             updateEqualizerAnalysisState();
         });
         viewModel.getShuffleEnabled().observe(getViewLifecycleOwner(), enabled -> {
@@ -219,6 +257,11 @@ public class NowPlayingFragment extends Fragment {
             radioMedia = Boolean.TRUE.equals(isRadio);
             syncCurrentSong();
             applyPlayerElementVisibility(AppPreferences.STYLE_RING.equals(activeStyle));
+            updateRadioStatusUi();
+        });
+        viewModel.getRadioConnectionState().observe(getViewLifecycleOwner(), state -> {
+            radioConnectionState = state == null ? PlayerController.RADIO_CONNECTION_IDLE : state;
+            updateRadioStatusUi();
         });
         viewModel.getRepeatMode().observe(getViewLifecycleOwner(), mode -> {
             repeatMode = mode == null ? Player.REPEAT_MODE_OFF : mode;
@@ -296,6 +339,8 @@ public class NowPlayingFragment extends Fragment {
         staticPlayerImage = new ShapeableImageView(requireContext());
         staticPlayerImage.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
         staticPlayerImage.setVisibility(View.VISIBLE);
+        staticPlayerImage.setClickable(true);
+        staticPlayerImage.setOnTouchListener(this::handleArtworkSwipe);
         attachStaticArtworkToHost(binding.artworkStage);
     }
 
@@ -321,6 +366,7 @@ public class NowPlayingFragment extends Fragment {
         FrameLayout host = rendererHost();
         attachStaticArtworkToHost(host);
         staticPlayerImage.animate().cancel();
+        if (!artworkSwipeTransitionRunning) staticPlayerImage.setTranslationX(0f);
         staticPlayerImage.setAlpha(1f);
         if (AppPreferences.STYLE_RING.equals(activeStyle) || !AppPreferences.showPlayerArtwork(requireContext())) {
             staticPlayerImage.setVisibility(View.GONE);
@@ -348,11 +394,13 @@ public class NowPlayingFragment extends Fragment {
         rendererStyle = activeStyle;
         rendererReady = false;
         rendererContentReady = false;
+        rendererRefreshInPlace = false;
         final int generation = ++rendererGeneration;
 
         WebView web = new WebView(requireContext());
         rendererWeb = web;
         configureLocalWebView(web);
+        web.setOnTouchListener(this::handleArtworkSwipe);
         web.setAlpha(0f);
         web.setVisibility(View.INVISIBLE);
         web.addJavascriptInterface(new RendererBridge(generation), "AndroidRenderer");
@@ -386,6 +434,173 @@ public class NowPlayingFragment extends Fragment {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
+    private boolean handleArtworkSwipe(View view, MotionEvent event) {
+        if (binding == null || viewModel == null || !hasMedia || radioMedia
+                || !AppPreferences.swipeArtworkToChangeTrack(requireContext())) {
+            artworkSwipeCandidate = false;
+            return false;
+        }
+
+        // When swipe-to-change is enabled, a 3D renderer must not also receive the same
+        // drag gesture. Consuming the WebView touch stream here keeps the model fixed while
+        // still allowing this listener to recognize left/right track swipes. If the option
+        // is disabled, touches fall through normally and the 3D model remains interactive.
+        boolean lock3dModelTouch = view == rendererWeb && !rendererTwoDimensional;
+
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                // Immersive 2D skins also contain controls. Only treat gestures that begin
+                // in the artwork area as artwork swipes.
+                if (view == rendererWeb && immersive2d && view.getHeight() > 0
+                        && event.getY() > view.getHeight() * 0.66f) {
+                    artworkSwipeCandidate = false;
+                    return false;
+                }
+                artworkSwipeDownX = event.getX();
+                artworkSwipeDownY = event.getY();
+                artworkSwipeCandidate = true;
+                return lock3dModelTouch;
+
+            case MotionEvent.ACTION_MOVE:
+                if (!artworkSwipeCandidate) return lock3dModelTouch;
+                float moveX = event.getX() - artworkSwipeDownX;
+                float moveY = event.getY() - artworkSwipeDownY;
+                if (Math.abs(moveX) >= dp(16) && Math.abs(moveX) > Math.abs(moveY) * 1.2f) {
+                    if (view.getParent() != null) view.getParent().requestDisallowInterceptTouchEvent(true);
+                }
+                return lock3dModelTouch;
+
+            case MotionEvent.ACTION_UP:
+                if (!artworkSwipeCandidate) return lock3dModelTouch;
+                artworkSwipeCandidate = false;
+                if (view.getParent() != null) view.getParent().requestDisallowInterceptTouchEvent(false);
+                float dx = event.getX() - artworkSwipeDownX;
+                float dy = event.getY() - artworkSwipeDownY;
+                if (Math.abs(dx) >= dp(64) && Math.abs(dx) > Math.abs(dy) * 1.35f) {
+                    runArtworkSwipeTransition(view, dx < 0f);
+                    return true;
+                }
+                return lock3dModelTouch;
+
+            case MotionEvent.ACTION_CANCEL:
+                artworkSwipeCandidate = false;
+                if (view.getParent() != null) view.getParent().requestDisallowInterceptTouchEvent(false);
+                return lock3dModelTouch;
+
+            default:
+                return lock3dModelTouch;
+        }
+    }
+
+    private void runArtworkSwipeTransition(@NonNull View artworkView, boolean next) {
+        if (viewModel == null) return;
+        Runnable changeTrack = () -> {
+            if (viewModel == null) return;
+            if (next) viewModel.next(); else viewModel.previous();
+        };
+        if (PowerSaverManager.isActive(requireContext())
+                || AppPreferences.getAnimationMultiplier(requireContext()) <= 0f) {
+            changeTrack.run();
+            return;
+        }
+
+        int duration = getResources().getInteger(android.R.integer.config_shortAnimTime);
+        if (artworkView == rendererWeb) {
+            artworkSwipeTransitionRunning = true;
+            if (rendererTwoDimensional) {
+                String direction = next ? "left" : "right";
+                eval2d("Player2D.animateArtworkSwipe(" + JSONObject.quote(direction) + "," + duration + ")");
+                artworkView.postDelayed(changeTrack, duration);
+            } else {
+                // Never translate the entire 3D WebView off-screen. The WebGL canvas can finish
+                // loading its replacement texture asynchronously; moving the host view at the same
+                // time could leave an empty stage. Keep the old model visible until Player3D
+                // confirms the new track artwork through AndroidRenderer.onReady().
+                changeTrack.run();
+                artworkView.postDelayed(() -> {
+                    if (binding != null && artworkSwipeTransitionRunning && !rendererTwoDimensional) {
+                        artworkSwipeTransitionRunning = false;
+                        rendererRefreshInPlace = false;
+                        if (rendererWeb != null) {
+                            rendererWeb.animate().cancel();
+                            rendererWeb.setTranslationX(0f);
+                            rendererWeb.setVisibility(View.VISIBLE);
+                            rendererWeb.setAlpha(1f);
+                        }
+                    }
+                }, Math.max(1400L, duration * 7L));
+            }
+            return;
+        }
+
+        float distance = Math.max(1f, artworkView.getWidth());
+        float outgoing = next ? -distance : distance;
+        artworkSwipeTransitionRunning = true;
+        artworkView.animate().cancel();
+        artworkView.animate()
+                .translationX(outgoing)
+                .setDuration(duration)
+                .withEndAction(() -> {
+                    if (binding == null) {
+                        resetPendingArtworkSwipe();
+                        return;
+                    }
+                    // Keep the view just outside the opposite edge until the new artwork/renderer
+                    // is actually ready. Starting the incoming animation immediately can be
+                    // cancelled by the asynchronous artwork load and leave the cover off-screen.
+                    pendingArtworkSwipeView = artworkView;
+                    pendingArtworkSwipeDuration = duration;
+                    artworkView.setTranslationX(-outgoing);
+                    changeTrack.run();
+                    artworkView.postDelayed(() -> {
+                        if (pendingArtworkSwipeView == artworkView) completePendingArtworkSwipe();
+                    }, Math.max(900L, duration * 5L));
+                })
+                .start();
+    }
+
+    private void completePendingArtworkSwipe() {
+        View pending = pendingArtworkSwipeView;
+        if (pending == null) return;
+        int duration = pendingArtworkSwipeDuration > 0
+                ? pendingArtworkSwipeDuration
+                : getResources().getInteger(android.R.integer.config_shortAnimTime);
+        pendingArtworkSwipeView = null;
+        pendingArtworkSwipeDuration = 0;
+        pending.animate().cancel();
+        if (binding == null || PowerSaverManager.isActive(requireContext())
+                || AppPreferences.getAnimationMultiplier(requireContext()) <= 0f) {
+            pending.setTranslationX(0f);
+            artworkSwipeTransitionRunning = false;
+            return;
+        }
+        pending.setVisibility(View.VISIBLE);
+        pending.animate()
+                .translationX(0f)
+                .setDuration(duration)
+                .withEndAction(() -> artworkSwipeTransitionRunning = false)
+                .start();
+    }
+
+    private void resetPendingArtworkSwipe() {
+        if (pendingArtworkSwipeView != null) {
+            pendingArtworkSwipeView.animate().cancel();
+            pendingArtworkSwipeView.setTranslationX(0f);
+        }
+        pendingArtworkSwipeView = null;
+        pendingArtworkSwipeDuration = 0;
+        artworkSwipeTransitionRunning = false;
+    }
+
+    private void resumeRendererArtworkSwipeWithCurrentArtwork() {
+        if (!artworkSwipeTransitionRunning || rendererWeb == null) return;
+        if (rendererTwoDimensional) {
+            eval2d("Player2D.setArtworkDataUrl(" + JSONObject.quote(currentArtworkDataUrl) + ")");
+        } else {
+            eval3d("Player3D.setArtworkDataUrl(" + JSONObject.quote(currentArtworkDataUrl) + ")");
+        }
+    }
+
     private void configureLocalWebView(WebView web) {
         web.setBackgroundColor(Color.TRANSPARENT);
         web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -414,7 +629,27 @@ public class NowPlayingFragment extends Fragment {
                 if (binding == null || rendererWeb == null || generation != rendererGeneration) return;
                 if (!activeStyle.equals(style) || !rendererStyle.equals(style)) return;
                 rendererContentReady = true;
-                if (isResumed()) revealRenderer();
+                if (pendingArtworkSwipeView == rendererWeb) {
+                    // 3D/native renderer: the new artwork is ready, so now bring the renderer in.
+                    rendererRefreshInPlace = false;
+                    completePendingArtworkSwipe();
+                    return;
+                }
+                boolean finishing2dSwipe = artworkSwipeTransitionRunning && rendererTwoDimensional;
+                artworkSwipeTransitionRunning = false;
+                if (isResumed()) {
+                    if (finishing2dSwipe || rendererRefreshInPlace) {
+                        // Track/state refresh: keep the complete renderer on screen until the new
+                        // frame is ready. Never expose the native artwork-only fallback in between.
+                        rendererRefreshInPlace = false;
+                        rendererWeb.animate().cancel();
+                        rendererWeb.setVisibility(View.VISIBLE);
+                        rendererWeb.setAlpha(1f);
+                        if (staticPlayerImage != null) staticPlayerImage.setVisibility(View.GONE);
+                    } else {
+                        revealRenderer();
+                    }
+                }
             });
         }
     }
@@ -482,8 +717,12 @@ public class NowPlayingFragment extends Fragment {
             return;
         }
         if (PowerSaverManager.isActive(requireContext()) || !hasMedia || !artworkResolved) {
-            if (PowerSaverManager.isActive(requireContext())) destroyRenderer();
-            showStaticArtwork();
+            if (PowerSaverManager.isActive(requireContext())) {
+                destroyRenderer();
+                showStaticArtwork();
+            } else if (!canKeepRendererVisibleForRefresh()) {
+                showStaticArtwork();
+            }
             return;
         }
         boolean shouldBe2d = AppPreferences.isTwoDimensionalStyle(activeStyle);
@@ -494,11 +733,22 @@ public class NowPlayingFragment extends Fragment {
         }
     }
 
+    private boolean canKeepRendererVisibleForRefresh() {
+        return rendererWeb != null
+                && rendererReady
+                && rendererContentReady
+                && activeStyle.equals(rendererStyle)
+                && rendererWeb.getVisibility() == View.VISIBLE
+                && rendererWeb.getAlpha() > 0.5f;
+    }
+
     private void prepareCurrentRenderer() {
         if (!rendererReady || rendererWeb == null || binding == null || !hasMedia || !artworkResolved) return;
+        boolean keepCurrentFrame = canKeepRendererVisibleForRefresh();
         rendererContentReady = false;
-        showStaticArtwork();
-        int accent = AppPreferences.getPlayerAccentColor(requireContext());
+        rendererRefreshInPlace = keepCurrentFrame;
+        if (!artworkSwipeTransitionRunning && !keepCurrentFrame) showStaticArtwork();
+        int accent = rendererAccentColor();
         String hex = String.format(Locale.US, "#%06X", accent & 0xFFFFFF);
         String style = activeStyle;
         String typography = AppPreferences.getPlayerTypography(requireContext());
@@ -506,6 +756,7 @@ public class NowPlayingFragment extends Fragment {
         if (rendererTwoDimensional) {
             push2dVisibility();
             pushSpotify2dState();
+            pushNeon2dState();
             rendererWeb.evaluateJavascript("Player2D.setProgress(" + positionMs + "," + durationMs + ")", null);
             rendererWeb.evaluateJavascript("Player2D.prepare("
                     + JSONObject.quote(style) + "," + JSONObject.quote(hex) + "," + animation + ","
@@ -514,17 +765,28 @@ public class NowPlayingFragment extends Fragment {
                     + JSONObject.quote(currentArtworkDataUrl) + ","
                     + JSONObject.quote(AppPreferences.getArtworkShape(requireContext())) + ")", null);
         } else {
-            rendererWeb.evaluateJavascript("Player3D.prepare("
-                    + JSONObject.quote(style) + "," + JSONObject.quote(hex) + "," + animation + ","
-                    + JSONObject.quote(typography) + "," + playing + ","
-                    + JSONObject.quote(currentTitle) + "," + JSONObject.quote(currentArtist) + ","
-                    + JSONObject.quote(currentArtworkDataUrl) + ")", null);
+            if (keepCurrentFrame || artworkSwipeTransitionRunning) {
+                // Track changes must not re-run Player3D.prepare(): prepare() temporarily sets
+                // initialized/visible=false while the new texture loads, which exposes an empty
+                // stage during next/previous/swipe. setTrack() keeps the current model/frame alive
+                // and swaps metadata + artwork only after the new image has finished loading.
+                rendererWeb.evaluateJavascript("Player3D.setTrack("
+                        + JSONObject.quote(currentTitle) + ","
+                        + JSONObject.quote(currentArtist) + ","
+                        + JSONObject.quote(currentArtworkDataUrl) + ")", null);
+            } else {
+                rendererWeb.evaluateJavascript("Player3D.prepare("
+                        + JSONObject.quote(style) + "," + JSONObject.quote(hex) + "," + animation + ","
+                        + JSONObject.quote(typography) + "," + playing + ","
+                        + JSONObject.quote(currentTitle) + "," + JSONObject.quote(currentArtist) + ","
+                        + JSONObject.quote(currentArtworkDataUrl) + ")", null);
+            }
         }
     }
 
     private void pushRendererAppearance() {
         if (!rendererReady || rendererWeb == null || binding == null) return;
-        int accent = AppPreferences.getPlayerAccentColor(requireContext());
+        int accent = rendererAccentColor();
         String hex = String.format(Locale.US, "#%06X", accent & 0xFFFFFF);
         float animation = AppPreferences.getAnimationMultiplier(requireContext());
         String typography = AppPreferences.getPlayerTypography(requireContext());
@@ -537,6 +799,7 @@ public class NowPlayingFragment extends Fragment {
                     + JSONObject.quote(AppPreferences.getArtworkShape(requireContext())) + ")");
             eval2d("Player2D.setPlaying(" + playing + ")");
             pushSpotify2dState();
+            pushNeon2dState();
         } else {
             eval3d("Player3D.setAccent(" + JSONObject.quote(hex) + ")");
             eval3d("Player3D.setAnimation(" + animation + ")");
@@ -613,6 +876,46 @@ public class NowPlayingFragment extends Fragment {
         eval2d("Player2D.setBackgroundColor(" + JSONObject.quote(backgroundHex) + ")");
     }
 
+    private int rendererAccentColor() {
+        if (!AppPreferences.STYLE_NEON.equals(activeStyle)) {
+            return AppPreferences.getPlayerAccentColor(requireContext());
+        }
+        String mode = AppPreferences.getNeonSkinColorMode(requireContext());
+        if (AppPreferences.APP_BACKGROUND_COLOR_ACCENT.equals(mode)) {
+            return AppPreferences.getPlayerAccentColor(requireContext());
+        }
+        if (AppPreferences.PLAYER_BACKGROUND_COLOR_ARTWORK.equals(mode)) {
+            UiPalette palette = currentPalette == null ? UiPalette.fallback(requireContext()) : currentPalette;
+            return palette.accent;
+        }
+        return AppPreferences.getNeonSkinColor1(requireContext());
+    }
+
+    private void pushNeon2dState() {
+        if (binding == null || !rendererTwoDimensional
+                || !AppPreferences.STYLE_NEON.equals(activeStyle)) return;
+        String mode = AppPreferences.getNeonSkinColorMode(requireContext());
+        int c1;
+        int c2;
+        int c3;
+        if (AppPreferences.APP_BACKGROUND_COLOR_ACCENT.equals(mode)) {
+            c1 = c2 = c3 = AppPreferences.getPlayerAccentColor(requireContext());
+        } else if (AppPreferences.PLAYER_BACKGROUND_COLOR_ARTWORK.equals(mode)) {
+            UiPalette palette = currentPalette == null ? UiPalette.fallback(requireContext()) : currentPalette;
+            c1 = c2 = c3 = palette.accent;
+        } else {
+            c1 = AppPreferences.getNeonSkinColor1(requireContext());
+            c2 = AppPreferences.getNeonSkinColor2(requireContext());
+            c3 = AppPreferences.getNeonSkinColor3(requireContext());
+        }
+        String h1 = String.format(Locale.US, "#%06X", c1 & 0xFFFFFF);
+        String h2 = String.format(Locale.US, "#%06X", c2 & 0xFFFFFF);
+        String h3 = String.format(Locale.US, "#%06X", c3 & 0xFFFFFF);
+        eval2d("Player2D.setNeonPalette(" + JSONObject.quote(mode) + ","
+                + JSONObject.quote(h1) + "," + JSONObject.quote(h2) + ","
+                + JSONObject.quote(h3) + ")");
+    }
+
     private void pushMetadata() {
         eval3d("Player3D.setMetadata(" + JSONObject.quote(currentTitle) + "," + JSONObject.quote(currentArtist) + ")");
         eval2d("Player2D.setMetadata(" + JSONObject.quote(currentTitle) + "," + JSONObject.quote(currentArtist) + ")");
@@ -627,11 +930,23 @@ public class NowPlayingFragment extends Fragment {
 
     private void loadArtworkForRenderers(String uri) {
         String requestedArtwork = value(uri);
-        if (requestedArtwork.equals(currentArtworkUri) && artworkResolved) return;
+        if (requestedArtwork.equals(currentArtworkUri) && artworkResolved) {
+            // Consecutive songs can share the same album artwork. The swipe must still finish.
+            if (pendingArtworkSwipeView != null && pendingArtworkSwipeView != rendererWeb) {
+                completePendingArtworkSwipe();
+            } else {
+                resumeRendererArtworkSwipeWithCurrentArtwork();
+            }
+            return;
+        }
         currentArtworkUri = requestedArtwork;
         artworkResolved = false;
         if (binding != null) binding.ringVisualizer.setArtworkLoading();
-        showStaticArtwork();
+        // Keep the complete previous renderer visible while the next artwork is loading.
+        // The artwork-only fallback is reserved for first load / missing renderer.
+        if (!artworkSwipeTransitionRunning && !canKeepRendererVisibleForRefresh()) {
+            showStaticArtwork();
+        }
         if (currentArtworkUri.isEmpty()) {
             currentArtworkDataUrl = "";
             if (staticPlayerImage != null) {
@@ -644,11 +959,14 @@ public class NowPlayingFragment extends Fragment {
             applyPaletteColors();
             applyPlayerBackgroundPalette();
             ensureRendererForCurrentState();
+            if (pendingArtworkSwipeView != null && pendingArtworkSwipeView != rendererWeb) {
+                completePendingArtworkSwipe();
+            }
             return;
         }
         Glide.with(this).asBitmap().load(Uri.parse(currentArtworkUri)).centerCrop().into(new CustomTarget<Bitmap>(512, 512) {
             @Override public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                if (binding == null) return;
+                if (binding == null || !requestedArtwork.equals(currentArtworkUri)) return;
                 currentArtworkDataUrl = bitmapToDataUrl(resource);
                 if (staticPlayerImage != null) {
                     staticPlayerImage.clearColorFilter();
@@ -662,10 +980,13 @@ public class NowPlayingFragment extends Fragment {
                 applyPlayerBackgroundPalette();
                 artworkResolved = true;
                 ensureRendererForCurrentState();
+                if (pendingArtworkSwipeView != null && pendingArtworkSwipeView != rendererWeb) {
+                    completePendingArtworkSwipe();
+                }
             }
 
             @Override public void onLoadFailed(@Nullable android.graphics.drawable.Drawable errorDrawable) {
-                if (binding == null) return;
+                if (binding == null || !requestedArtwork.equals(currentArtworkUri)) return;
                 currentArtworkDataUrl = "";
                 if (staticPlayerImage != null) {
                     staticPlayerImage.setImageResource(R.drawable.ic_music);
@@ -679,6 +1000,9 @@ public class NowPlayingFragment extends Fragment {
                 applyPlayerBackgroundPalette();
                 artworkResolved = true;
                 ensureRendererForCurrentState();
+                if (pendingArtworkSwipeView != null && pendingArtworkSwipeView != rendererWeb) {
+                    completePendingArtworkSwipe();
+                }
             }
 
             @Override public void onLoadCleared(@Nullable android.graphics.drawable.Drawable placeholder) { }
@@ -706,8 +1030,16 @@ public class NowPlayingFragment extends Fragment {
         rendererGeneration++;
         rendererReady = false;
         rendererContentReady = false;
+        rendererRefreshInPlace = false;
         rendererStyle = "";
         WebView web = rendererWeb;
+        boolean preserveStaticArtworkSwipe = pendingArtworkSwipeView != null
+                && pendingArtworkSwipeView != web;
+        if (!preserveStaticArtworkSwipe) artworkSwipeTransitionRunning = false;
+        if (pendingArtworkSwipeView == web) {
+            pendingArtworkSwipeView = null;
+            pendingArtworkSwipeDuration = 0;
+        }
         rendererWeb = null;
         if (web == null) return;
         try {
@@ -719,19 +1051,154 @@ public class NowPlayingFragment extends Fragment {
     }
 
     private void openPlayerOptions() {
-        if (!isAdded()) return;
-        boolean showMusic = AppPreferences.showPlayerMusicButton(requireContext());
-        if (!showMusic) return;
+        if (!isAdded() || binding == null) return;
 
-        BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
-        View content = getLayoutInflater().inflate(R.layout.bottom_sheet_player_options, null, false);
-        View queue = content.findViewById(R.id.playerOptionQueue);
-        View music = content.findViewById(R.id.playerOptionMusic);
-        queue.setVisibility(View.GONE);
-        music.setVisibility(View.VISIBLE);
-        music.setOnClickListener(v -> { dialog.dismiss(); navigateToMusicSongs(); });
-        dialog.setContentView(content);
-        dialog.show();
+        LinearLayout menuContainer = new LinearLayout(requireContext());
+        menuContainer.setOrientation(LinearLayout.VERTICAL);
+        int minWidth = dp(192);
+        menuContainer.setMinimumWidth(minWidth);
+        menuContainer.setPadding(0, dp(8), 0, dp(8));
+
+        int surfaceColor = resolveMaterialColor(com.google.android.material.R.attr.colorSurface, 0xFF202020);
+        int onSurfaceColor = resolveMaterialColor(com.google.android.material.R.attr.colorOnSurface, Color.WHITE);
+
+        MaterialCardView card = new MaterialCardView(requireContext());
+        card.setCardBackgroundColor(surfaceColor);
+        card.setRadius(dp(24));
+        card.setCardElevation(dp(14));
+        card.setUseCompatPadding(false);
+        card.setStrokeWidth(0);
+        card.addView(menuContainer, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        final PopupWindow popupWindow = new PopupWindow(card,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true);
+        popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        popupWindow.setElevation(dp(18));
+        popupWindow.setOutsideTouchable(true);
+        popupWindow.setClippingEnabled(true);
+
+        if (radioMedia || currentSong == null) {
+            addPlayerOptionItem(menuContainer, "Ir a Música", onSurfaceColor, () -> {
+                popupWindow.dismiss();
+                navigateToMusicSongs();
+            });
+        } else {
+            Song song = currentSong;
+            addPlayerOptionItem(menuContainer, "Editar", onSurfaceColor, () -> {
+                popupWindow.dismiss();
+                openEditor();
+            });
+            addPlayerOptionItem(menuContainer, "Ocultar", onSurfaceColor, () -> {
+                popupWindow.dismiss();
+                hideCurrentSong(song);
+            });
+            addPlayerOptionItem(menuContainer, "Eliminar", onSurfaceColor, () -> {
+                popupWindow.dismiss();
+                requestDeleteCurrentSong(song);
+            });
+            addPlayerOptionItem(menuContainer, "Ubicar en canciones", onSurfaceColor, () -> {
+                popupWindow.dismiss();
+                locateCurrentSong(song);
+            });
+        }
+
+        card.measure(
+                View.MeasureSpec.makeMeasureSpec(requireView().getWidth(), View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(requireView().getHeight(), View.MeasureSpec.AT_MOST));
+        int measuredWidth = Math.max(card.getMeasuredWidth(), minWidth);
+        int xOffset = binding.moreButton.getWidth() - measuredWidth;
+        popupWindow.showAsDropDown(binding.moreButton, xOffset, dp(6), Gravity.END);
+    }
+
+    private void addPlayerOptionItem(@NonNull LinearLayout container,
+                                     @NonNull String label,
+                                     int textColor,
+                                     @NonNull Runnable action) {
+        TextView itemView = new TextView(requireContext());
+        itemView.setText(label);
+        itemView.setTextColor(textColor);
+        itemView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f);
+        itemView.setTypeface(AppTypography.get(requireContext(), Typeface.NORMAL));
+        itemView.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        itemView.setMinWidth(dp(192));
+        itemView.setMinimumHeight(dp(48));
+        itemView.setPadding(dp(20), dp(10), dp(20), dp(10));
+        TypedValue outValue = new TypedValue();
+        requireContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+        itemView.setBackgroundResource(outValue.resourceId);
+        itemView.setOnClickListener(v -> action.run());
+        container.addView(itemView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    }
+
+    private int resolveMaterialColor(int attr, int fallbackColor) {
+        try {
+            return MaterialColors.getColor(requireContext(), attr, fallbackColor);
+        } catch (Exception ignored) {
+            return fallbackColor;
+        }
+    }
+
+    private void hideCurrentSong(@NonNull Song song) {
+        // Move playback first so the player never remains focused on a track that just became hidden.
+        viewModel.next();
+        musicViewModel.setHidden(Collections.singletonList(song), true);
+    }
+
+    private void requestDeleteCurrentSong(@NonNull Song song) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                pendingDeleteSong = song;
+                PendingIntent request = MediaStore.createDeleteRequest(
+                        requireContext().getContentResolver(),
+                        Collections.singletonList(song.getContentUri()));
+                deleteCurrentSongLauncher.launch(
+                        new IntentSenderRequest.Builder(request.getIntentSender()).build());
+            } catch (RuntimeException error) {
+                pendingDeleteSong = null;
+                android.widget.Toast.makeText(requireContext(),
+                        "No se pudo solicitar la eliminación", android.widget.Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Eliminar canción")
+                .setMessage("Se borrará físicamente del dispositivo.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Eliminar", (dialog, which) -> {
+                    ContentResolver resolver = requireContext().getContentResolver();
+                    try {
+                        viewModel.next();
+                        resolver.delete(song.getContentUri(), null, null);
+                        musicViewModel.cleanupDeleted(Collections.singletonList(song));
+                    } catch (Exception error) {
+                        android.widget.Toast.makeText(requireContext(),
+                                "No se pudo eliminar la canción", android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .show();
+    }
+
+    private void skipThenCleanupDeletedSong(@NonNull Song song) {
+        if (viewModel == null || musicViewModel == null) return;
+        viewModel.next();
+        musicViewModel.cleanupDeleted(Collections.singletonList(song));
+    }
+
+    private void locateCurrentSong(@NonNull Song song) {
+        if (!isAdded() || !(requireActivity() instanceof MainActivity)) return;
+        musicViewModel.requestLocateSong(song.getMediaKey());
+        MainActivity activity = (MainActivity) requireActivity();
+        if (!activity.openTab(R.id.musicFragment)) return;
+        NavController controller = activity.getActiveNavController();
+        if (controller == null || controller.getCurrentDestination() == null) return;
+        if (controller.getCurrentDestination().getId() != R.id.musicFragment) {
+            controller.popBackStack(R.id.musicFragment, false);
+        }
     }
 
     private void installFullscreenInsets() {
@@ -997,7 +1464,11 @@ public class NowPlayingFragment extends Fragment {
             if (!showArtwork) staticPlayerImage.setVisibility(View.GONE);
         }
 
-        binding.seekBar.setVisibility(AppPreferences.showPlayerProgressLine(requireContext()) ? View.VISIBLE : View.GONE);
+        boolean showProgress = AppPreferences.showPlayerProgressLine(requireContext()) && !radioMedia;
+        binding.seekBar.setVisibility(showProgress ? View.VISIBLE : View.GONE);
+        binding.progressTimesRow.setVisibility(showProgress ? View.VISIBLE : View.GONE);
+        binding.radioStatusCard.setVisibility(radioMedia ? View.VISIBLE : View.GONE);
+        updateRadioStatusUi();
         applyMetadataVisibility();
         binding.shuffleButton.setVisibility(AppPreferences.showPlayerShuffle(requireContext()) ? View.VISIBLE : View.GONE);
         binding.repeatButton.setVisibility(AppPreferences.showPlayerRepeat(requireContext()) ? View.VISIBLE : View.GONE);
@@ -1012,6 +1483,30 @@ public class NowPlayingFragment extends Fragment {
         CharSequence albumText = binding.album.getText();
         boolean hasAlbum = albumText != null && albumText.length() > 0;
         binding.album.setVisibility(AppPreferences.showPlayerAlbum(requireContext()) && hasAlbum ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateRadioStatusUi() {
+        if (binding == null || !radioMedia) return;
+
+        String label;
+        int dotColor;
+        if (radioConnectionState == PlayerController.RADIO_CONNECTION_CONNECTING) {
+            label = "CONECTANDO…";
+            dotColor = playerSecondaryColor;
+        } else if (radioConnectionState == PlayerController.RADIO_CONNECTION_ERROR) {
+            label = "SIN CONEXIÓN";
+            dotColor = resolveMaterialColor(com.google.android.material.R.attr.colorError, playerSecondaryColor);
+        } else if (playing) {
+            label = "EN VIVO";
+            dotColor = playerAccentColor;
+        } else {
+            label = "PAUSADA";
+            dotColor = playerSecondaryColor;
+        }
+        binding.radioStatusText.setText(label);
+        binding.radioStatusDot.setBackgroundTintList(ColorStateList.valueOf(dotColor));
+        binding.radioStatusText.setTextColor(playerContentColor);
+        binding.radioStatusCard.setCardBackgroundColor(ColorUtils.setAlphaComponent(playerContentColor, 28));
     }
 
     private void renderPlaybackModes() {
@@ -1109,6 +1604,8 @@ public class NowPlayingFragment extends Fragment {
         binding.album.setTextColor(playerSecondaryColor);
         binding.currentTime.setTextColor(playerSecondaryColor);
         binding.duration.setTextColor(playerSecondaryColor);
+        binding.radioStatusText.setTextColor(playerContentColor);
+        binding.radioStatusCard.setCardBackgroundColor(ColorUtils.setAlphaComponent(playerContentColor, 28));
         boolean spotifyImmersive = immersive2d && AppPreferences.STYLE_SPOTIFY_2D.equals(activeStyle);
         binding.headerLabel.setTextColor(spotifyImmersive ? Color.WHITE : playerContentColor);
 

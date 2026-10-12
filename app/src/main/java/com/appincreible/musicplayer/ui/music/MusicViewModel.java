@@ -52,6 +52,7 @@ public class MusicViewModel extends AndroidViewModel implements SharedPreference
     private Map<Long, SongStateEntity> states = new HashMap<>();
     private Set<String> hiddenFolders = new HashSet<>();
     private int musicSection = 0;
+    private String pendingLocateMediaKey = "";
     private int playlistScrollPosition = 0;
     private int playlistScrollOffset = 0;
 
@@ -339,6 +340,16 @@ public class MusicViewModel extends AndroidViewModel implements SharedPreference
 
     public int getMusicSection() { return musicSection; }
     public void setMusicSection(int section) { musicSection = section; }
+
+    public synchronized void requestLocateSong(String mediaKey) {
+        pendingLocateMediaKey = mediaKey == null ? "" : mediaKey;
+    }
+
+    public synchronized String consumeLocateSongRequest() {
+        String requested = pendingLocateMediaKey;
+        pendingLocateMediaKey = "";
+        return requested;
+    }
     public void setPlaylistScroll(int position, int offset) {
         playlistScrollPosition = Math.max(0, position);
         playlistScrollOffset = offset;

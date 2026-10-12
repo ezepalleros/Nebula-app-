@@ -20,6 +20,11 @@
         android:label="El intruso" />
 
     <fragment
+        android:id="@+id/doubleMixGameFragment"
+        android:name="com.appincreible.musicplayer.ui.games.DoubleMixGameFragment"
+        android:label="Mezcla doble" />
+
+    <fragment
         android:id="@+id/nowPlayingFragment"
         android:name="com.appincreible.musicplayer.ui.player.NowPlayingFragment"
         android:label="Reproduciendo" />

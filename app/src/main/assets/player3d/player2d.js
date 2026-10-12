@@ -4,8 +4,10 @@
   let style=null,accent='#4F7DFF',playing=false,animation=1,visible=false,requestedVisible=true,typography='modern',artworkShape='rounded',initialized=false;
   let title='',artist='',artData='',artImage=null;
   let shuffle=false,repeatMode=0,favorite=false,favoriteVisible=false,queueVisible=false,backgroundColor='#385044';
+  let neonMode='accent',neonColors=['#4F7DFF','#4F7DFF','#4F7DFF'];
   let ui={artwork:true,title:true,artist:true,progress:true,waves:true,shuffle:true,repeat:true,modeText:true};
   let positionMs=0,durationMs=0,raf=0,last=0,lastInteraction=0,pageVisible=!document.hidden,lastSpectrumPull=0;
+  let artworkSwipeOffset=0,artworkSwipeDirection=0,artworkSwipePhase='',artworkSwipeStart=0,artworkSwipeDuration=180;
   const spectrum=new Float32Array(24), peaks=new Float32Array(24);
 
   function canRender(){return initialized&&visible&&pageVisible;}
@@ -34,9 +36,10 @@
   function render(ts){
     if(!canRender()||!style)return;
     resize();
+    updateArtworkSwipe(Number(ts)||performance.now());
     updateSpectrum(Number(ts)||performance.now());
     const progress=durationMs>0?Math.max(0,Math.min(1,positionMs/durationMs)):0;
-    PlayerModels.drawSkin2D(canvas,style,{accent,title,artist,artImage,artworkShape,playing,animation,immersive:style==='spotify2d',progress,positionMs,durationMs,tick:ts||Date.now(),typography,spectrum,peaks,ui,shuffle,repeatMode,favorite,favoriteVisible,queueVisible,backgroundColor});
+    PlayerModels.drawSkin2D(canvas,style,{accent,title,artist,artImage,artworkShape,playing,animation,immersive:style==='spotify2d',progress,positionMs,durationMs,tick:ts||Date.now(),typography,spectrum,peaks,ui,shuffle,repeatMode,favorite,favoriteVisible,queueVisible,backgroundColor,artworkSwipeOffset,neonMode,neonColors});
   }
   function styleNeedsMotion(){
     if(!playing)return false;
@@ -44,7 +47,25 @@
     if(animation<=0)return false;
     return style==='neon';
   }
-  function shouldAnimate(ts){return canRender()&&(styleNeedsMotion()||(ts-lastInteraction<1400));}
+  function shouldAnimate(ts){return canRender()&&(styleNeedsMotion()||(ts-lastInteraction<1400)||artworkSwipePhase==='out'||artworkSwipePhase==='in');}
+  function swipeEase(t){t=Math.max(0,Math.min(1,t));return 1-Math.pow(1-t,3);}
+  function updateArtworkSwipe(ts){
+    if(artworkSwipePhase!=='out'&&artworkSwipePhase!=='in')return;
+    const p=Math.max(0,Math.min(1,(ts-artworkSwipeStart)/Math.max(1,artworkSwipeDuration)));
+    const eased=swipeEase(p);
+    if(artworkSwipePhase==='out'){
+      artworkSwipeOffset=artworkSwipeDirection*canvas.width*eased;
+      if(p>=1)artworkSwipePhase='waiting';
+    }else{
+      artworkSwipeOffset=-artworkSwipeDirection*canvas.width*(1-eased);
+      if(p>=1){artworkSwipeOffset=0;artworkSwipeDirection=0;artworkSwipePhase='';}
+    }
+  }
+  function beginIncomingArtworkSwipe(){
+    if(artworkSwipePhase!=='waiting'||!artworkSwipeDirection)return;
+    artworkSwipeOffset=-artworkSwipeDirection*canvas.width;
+    artworkSwipePhase='in';artworkSwipeStart=performance.now();
+  }
   function loop(ts){
     raf=0;if(!canRender())return;
     const recent=ts-lastInteraction<1400;
@@ -60,7 +81,7 @@
     img.onerror=()=>{artImage=null;if(done)done();};
     img.src=artData;
   }
-  function finishInitialRender(){initialized=true;visible=requestedVisible;render();schedule();notifyReady();}
+  function finishInitialRender(){initialized=true;visible=requestedVisible;beginIncomingArtworkSwipe();render();schedule();notifyReady();}
   function prepare(s,a,anim,typ,play,t,ar,d,shape){
     style=s||'classic';accent=typeof a==='string'?a:'#4F7DFF';animation=Math.max(0,Number(anim)||0);
     typography=typ||'modern';artworkShape=(shape==='circle'||shape==='square')?shape:'rounded';playing=!!play;title=t||'';artist=ar||'';artData=d||'';
@@ -100,18 +121,26 @@
     setTypography(v){typography=v||'modern';if(initialized)render();},
     setArtworkShape(v){artworkShape=(v==='circle'||v==='square')?v:'rounded';if(initialized)render();},
     setMetadata(t,a){title=t||'';artist=a||'';render();},
-    setArtworkDataUrl(v){artData=v||'';loadArt(()=>{if(!initialized)finishInitialRender();else{render();notifyReady();}});},
-    setTrack(t,a,d){title=t||'';artist=a||'';artData=d||'';loadArt(()=>{if(!initialized)finishInitialRender();else{render();notifyReady();}});},
+    setArtworkDataUrl(v){artData=v||'';loadArt(()=>{if(!initialized)finishInitialRender();else{beginIncomingArtworkSwipe();render();schedule();notifyReady();}});},
+    setTrack(t,a,d){title=t||'';artist=a||'';artData=d||'';loadArt(()=>{if(!initialized)finishInitialRender();else{beginIncomingArtworkSwipe();render();schedule();notifyReady();}});},
     setProgress(p,d){positionMs=Math.max(0,Number(p)||0);durationMs=Math.max(0,Number(d)||0);if(style==='spotify2d')render();},
     setPlaybackModes(s,r){shuffle=!!s;repeatMode=Math.max(0,Math.min(2,Number(r)||0));if(initialized)render();},
     setFavorite(v,visibleFlag){favorite=!!v;favoriteVisible=!!visibleFlag;if(initialized)render();},
     setQueueVisible(v){queueVisible=!!v;if(initialized)render();},
     setBackgroundColor(v){backgroundColor=typeof v==='string'?v:'#385044';if(initialized)render();},
+    setNeonPalette(mode,c1,c2,c3){neonMode=mode||'accent';neonColors=[c1||accent,c2||c1||accent,c3||c2||c1||accent];if(initialized&&style==='neon')render();},
     setVisibility(artwork,titleVisible,artistVisible,progressVisible,wavesVisible,shuffleVisible,repeatVisible,modeTextVisible){
       ui.artwork=!!artwork;ui.title=!!titleVisible;ui.artist=!!artistVisible;ui.progress=!!progressVisible;ui.waves=!!wavesVisible;
       ui.shuffle=!!shuffleVisible;ui.repeat=!!repeatVisible;ui.modeText=!!modeTextVisible;render();
     },
     setAppVisible(v){requestedVisible=!!v;visible=requestedVisible;if(visible&&initialized){render();schedule();}else if(raf){cancelAnimationFrame(raf);raf=0;}},
-    dispose(){requestedVisible=false;visible=false;initialized=false;if(raf)cancelAnimationFrame(raf);raf=0;if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=0;}artImage=null;spectrum.fill(0);peaks.fill(0);}
+    animateArtworkSwipe(direction,duration){
+      if(!initialized)return;
+      artworkSwipeDirection=direction==='left'?-1:1;
+      artworkSwipeDuration=Math.max(1,Number(duration)||180);
+      artworkSwipeOffset=0;artworkSwipePhase='out';artworkSwipeStart=performance.now();
+      markInteraction();render();schedule();
+    },
+    dispose(){requestedVisible=false;visible=false;initialized=false;if(raf)cancelAnimationFrame(raf);raf=0;if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=0;}artImage=null;artworkSwipeOffset=0;artworkSwipeDirection=0;artworkSwipePhase='';spectrum.fill(0);peaks.fill(0);}
   };
 })();

@@ -4,7 +4,9 @@ import androidx.media3.common.C;
 import androidx.media3.common.ForwardingSimpleBasePlayer;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.Player;
+import androidx.annotation.Nullable;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.session.MediaSession;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -14,6 +16,7 @@ import java.util.List;
 @UnstableApi
 public final class LogicalPlayer extends ForwardingSimpleBasePlayer {
     private final AudioEngine engine;
+    @Nullable private MediaSession mediaSession;
 
     LogicalPlayer(Player initialPlayer, AudioEngine engine) {
         super(initialPlayer);
@@ -24,10 +27,28 @@ public final class LogicalPlayer extends ForwardingSimpleBasePlayer {
         setPlayer(newPlayer);
     }
 
+    void attachMediaSession(@Nullable MediaSession session) {
+        mediaSession = session;
+    }
+
+    private boolean isExternalControllerRequest() {
+        MediaSession session = mediaSession;
+        if (session == null) return false;
+        MediaSession.ControllerInfo controller = session.getControllerForCurrentRequest();
+        if (controller == null) return false;
+        String packageName = controller.getPackageName();
+        return packageName == null || !engine.context().getPackageName().equals(packageName);
+    }
+
     @Override
     protected ListenableFuture<?> handleSetPlayWhenReady(boolean playWhenReady) {
-        if (playWhenReady) engine.play();
-        else engine.pause();
+        if (isExternalControllerRequest()) {
+            if (playWhenReady) engine.playFromExternalControl();
+            else engine.pauseFromExternalControl();
+        } else {
+            if (playWhenReady) engine.play();
+            else engine.pause();
+        }
         return Futures.immediateVoidFuture();
     }
 
@@ -69,20 +90,25 @@ public final class LogicalPlayer extends ForwardingSimpleBasePlayer {
 
     @Override
     protected ListenableFuture<?> handleSeek(int mediaItemIndex, long positionMs, @Player.Command int seekCommand) {
+        if (isExternalControllerRequest()) {
+            switch (seekCommand) {
+                case Player.COMMAND_SEEK_TO_PREVIOUS:
+                case Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM:
+                    engine.previousFromExternalControl();
+                    return Futures.immediateVoidFuture();
+                case Player.COMMAND_SEEK_TO_NEXT:
+                case Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM:
+                    engine.nextFromExternalControl();
+                    return Futures.immediateVoidFuture();
+                default:
+                    break;
+            }
+        }
         switch (seekCommand) {
             case Player.COMMAND_SEEK_TO_PREVIOUS:
-                if (engine.isSongShuffleNavigationActive()) {
-                    if (mediaItemIndex == engine.getCurrentMediaItemIndex()) engine.seekTo(0L);
-                    else engine.seekToPreviousSongInHistory();
-                } else if (mediaItemIndex != C.INDEX_UNSET && mediaItemIndex != engine.getCurrentMediaItemIndex()) {
-                    engine.manualTransitionTo(mediaItemIndex, positionMs == C.TIME_UNSET ? 0L : positionMs);
-                } else if (positionMs != C.TIME_UNSET) {
-                    engine.seekTo(positionMs);
-                }
-                break;
             case Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM:
-                if (engine.isSongShuffleNavigationActive()) {
-                    engine.seekToPreviousSongInHistory();
+                if (engine.isCurrentSong()) {
+                    engine.handlePreviousSong();
                 } else if (mediaItemIndex != C.INDEX_UNSET && mediaItemIndex != engine.getCurrentMediaItemIndex()) {
                     engine.manualTransitionTo(mediaItemIndex, positionMs == C.TIME_UNSET ? 0L : positionMs);
                 } else if (positionMs != C.TIME_UNSET) {

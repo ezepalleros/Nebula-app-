@@ -144,10 +144,51 @@ final class TransitionEngine {
         requestEvaluation();
     }
 
+    void resumeImmediate() {
+        if (djAtBoundary || djSpeaking || djArmed) clearDjState(true);
+        generation++;
+        crossfading = false;
+        manualPending = false;
+        pendingTargetIndex = C.INDEX_UNSET;
+        preloadedTargetIndex = C.INDEX_UNSET;
+        if (engine.hasStandby()) {
+            engine.internal(() -> {
+                engine.standby().pause();
+                engine.standby().stop();
+            });
+            engine.standbyGain().setEnvelopeImmediately(0f);
+        }
+        engine.activeGain().setEnvelopeImmediately(1f);
+        engine.internal(engine.active()::play);
+        requestEvaluation();
+    }
+
     void pauseWithFade() {
         long duration = AudioPreferences.fadePauseEnabled(engine.context())
                 ? AudioPreferences.fadePauseMs(engine.context()) : 0L;
         pauseWithFade(duration);
+    }
+
+    void pauseImmediate() {
+        if (djSpeaking || djAtBoundary || djArmed) clearDjState(true);
+        generation++;
+        boolean promoteAfterPause = engine.hasStandby() && crossfading
+                && engine.standby().isPlaying()
+                && engine.standbyGain().getEnvelopeGain() > engine.activeGain().getEnvelopeGain();
+        crossfading = false;
+        manualPending = false;
+        pendingTargetIndex = C.INDEX_UNSET;
+        preloadedTargetIndex = C.INDEX_UNSET;
+        cancelTicker();
+        engine.activeGain().setEnvelopeImmediately(0f);
+        if (engine.hasStandby()) engine.standbyGain().setEnvelopeImmediately(0f);
+        engine.internal(() -> {
+            engine.active().pause();
+            if (engine.hasStandby()) engine.standby().pause();
+        });
+        if (promoteAfterPause) engine.promoteStandby();
+        engine.activeGain().setEnvelopeImmediately(0f);
+        if (engine.hasStandby()) engine.standbyGain().setEnvelopeImmediately(0f);
     }
 
     void pauseWithFade(long durationMs) {

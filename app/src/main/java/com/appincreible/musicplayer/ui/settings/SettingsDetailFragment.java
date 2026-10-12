@@ -107,6 +107,8 @@ public class SettingsDetailFragment extends Fragment {
         }
 
         binding.styleRow.setOnClickListener(v -> showStylePicker());
+        binding.neonSkinColorRow.setOnClickListener(v ->
+                NeonColorSettingsController.show(this, this::refreshSummary));
         binding.equalizerSkinBackgroundRow.setOnClickListener(v -> {
             boolean ring = AppPreferences.STYLE_RING.equals(AppPreferences.getPlayerStyle(requireContext()));
             int initial = ring ? AppPreferences.getRingSkinBackgroundColor(requireContext())
@@ -176,10 +178,22 @@ public class SettingsDetailFragment extends Fragment {
             if (bindingPreferences) return;
             prefs.edit().putBoolean(AppPreferences.KEY_SHOW_RADIO_STATION_COUNT, checked).commit();
         });
+        binding.radioFavoritesWrapSwitch.setOnCheckedChangeListener((button, checked) -> {
+            if (bindingPreferences) return;
+            prefs.edit().putBoolean(AppPreferences.KEY_RADIO_FAVORITES_WRAP, checked).commit();
+        });
         binding.centerPlayerInfoSwitch.setOnCheckedChangeListener((button, checked) -> {
             if (bindingPreferences) return;
             prefs.edit().putBoolean(AppPreferences.KEY_CENTER_PLAYER_INFO, checked).commit();
             refreshSummary();
+        });
+        binding.previousRestartSwitch.setOnCheckedChangeListener((button, checked) -> {
+            if (bindingPreferences) return;
+            prefs.edit().putBoolean(AppPreferences.KEY_PREVIOUS_RESTART_AFTER_3S, checked).commit();
+        });
+        binding.swipeArtworkSwitch.setOnCheckedChangeListener((button, checked) -> {
+            if (bindingPreferences) return;
+            prefs.edit().putBoolean(AppPreferences.KEY_SWIPE_ARTWORK_TO_CHANGE_TRACK, checked).commit();
         });
         binding.showBottomNavNowPlayingSwitch.setOnCheckedChangeListener((button, checked) -> {
             if (bindingPreferences) return;
@@ -225,10 +239,11 @@ public class SettingsDetailFragment extends Fragment {
                 show(binding.startPageRow, binding.tabsRow, binding.navigationRow, binding.showBottomNavCard);
                 break;
             case SettingsFragment.CATEGORY_PLAYER:
-                show(binding.playerPreviewCard, binding.styleRow,
+                show(binding.playerPreviewCard, binding.styleRow, binding.neonSkinColorRow,
                         binding.equalizerSkinBackgroundRow, binding.equalizerSkinBarsRow, binding.fftIntensityCard,
                         binding.backgroundRow, binding.playerBackgroundColorsRow, binding.playerVisibilityLabel, binding.playerAppearancePreviewCard,
-                        binding.playerVisibilityCard, binding.centerPlayerInfoCard, binding.miniSubtitleCard, binding.miniPlayerBackgroundCard);
+                        binding.playerVisibilityCard, binding.centerPlayerInfoCard, binding.previousRestartCard, binding.swipeArtworkCard,
+                        binding.miniSubtitleCard, binding.miniPlayerBackgroundCard);
                 break;
             case SettingsFragment.CATEGORY_AUDIO:
                 show(binding.playbackOrderCard, binding.songOrderLabel,
@@ -240,7 +255,8 @@ public class SettingsDetailFragment extends Fragment {
                 break;
             case SettingsFragment.CATEGORY_RADIO:
                 show(binding.playbackOrderCard, binding.radioOrderLabel, binding.radioShuffleSwitch,
-                        binding.radioRepeatButton, binding.radioOrderHelp, binding.radioStationCountCard);
+                        binding.radioRepeatButton, binding.radioOrderHelp, binding.radioStationCountCard,
+                        binding.radioFavoritesWrapCard);
                 hide(binding.songOrderLabel, binding.songShuffleSwitch, binding.songRepeatButton,
                         binding.orderDivider);
                 break;
@@ -254,6 +270,7 @@ public class SettingsDetailFragment extends Fragment {
         }
         // Equalizer-specific rows are controlled again by refreshSummary().
         if (!SettingsFragment.CATEGORY_PLAYER.equals(category)) {
+            binding.neonSkinColorRow.setVisibility(View.GONE);
             binding.equalizerSkinBackgroundRow.setVisibility(View.GONE);
             binding.equalizerSkinBarsRow.setVisibility(View.GONE);
             binding.fftIntensityCard.setVisibility(View.GONE);
@@ -261,7 +278,7 @@ public class SettingsDetailFragment extends Fragment {
     }
 
     private void setAllSettingsViewsGone() {
-        hide(binding.playerPreviewCard, binding.playerSectionLabel, binding.styleRow,
+        hide(binding.playerPreviewCard, binding.playerSectionLabel, binding.styleRow, binding.neonSkinColorRow,
                 binding.equalizerSkinBackgroundRow, binding.equalizerSkinBarsRow, binding.fftIntensityCard,
                 binding.accentRow, binding.animationRow, binding.backgroundRow, binding.playerBackgroundColorsRow, binding.typographyRow,
                 binding.audioSectionLabel, binding.playbackOrderCard,
@@ -271,8 +288,9 @@ public class SettingsDetailFragment extends Fragment {
                 binding.themeRow, binding.appBackgroundSectionLabel, binding.appBackgroundPreviewCard,
                 binding.appBackgroundRow, binding.appBackgroundColorsRow, binding.listTransparentCard,
                 binding.playerVisibilityLabel, binding.playerAppearancePreviewCard, binding.playerVisibilityCard,
-                binding.centerPlayerInfoCard, binding.showBottomNavCard, binding.miniSubtitleCard, binding.miniPlayerBackgroundCard,
-                binding.radioStationCountCard,
+                binding.centerPlayerInfoCard, binding.previousRestartCard, binding.swipeArtworkCard, binding.showBottomNavCard,
+                binding.miniSubtitleCard, binding.miniPlayerBackgroundCard,
+                binding.radioStationCountCard, binding.radioFavoritesWrapCard,
                 binding.librarySectionLabel, binding.libraryGroupingRow, binding.hideWhatsAppAudioCard,
                 binding.librarySourceFoldersCard);
     }
@@ -516,7 +534,10 @@ public class SettingsDetailFragment extends Fragment {
         binding.miniSubtitleSwitch.setChecked(prefs.getBoolean(AppPreferences.KEY_SHOW_MINI_SUBTITLE, true));
         binding.miniPlayerBackgroundSwitch.setChecked(AppPreferences.miniPlayerUsesPlayerBackground(requireContext()));
         binding.radioStationCountSwitch.setChecked(AppPreferences.showRadioStationCount(requireContext()));
+        binding.radioFavoritesWrapSwitch.setChecked(AppPreferences.radioFavoritesWrap(requireContext()));
         binding.centerPlayerInfoSwitch.setChecked(prefs.getBoolean(AppPreferences.KEY_CENTER_PLAYER_INFO, false));
+        binding.previousRestartSwitch.setChecked(AppPreferences.previousRestartsAfterThreeSeconds(requireContext()));
+        binding.swipeArtworkSwitch.setChecked(AppPreferences.swipeArtworkToChangeTrack(requireContext()));
         binding.showBottomNavNowPlayingSwitch.setChecked(AppPreferences.showBottomNavInNowPlaying(requireContext()));
         binding.showPlayerBackSwitch.setChecked(AppPreferences.showPlayerBackButton(requireContext()));
         binding.showPlayerHeaderLabelSwitch.setChecked(AppPreferences.showPlayerHeaderLabel(requireContext()));
@@ -551,12 +572,25 @@ public class SettingsDetailFragment extends Fragment {
         int accent = AppPreferences.getPlayerAccentColor(requireContext());
 
         binding.styleValue.setText(styleName);
+        boolean neonSkin = AppPreferences.STYLE_NEON.equals(style);
         boolean equalizerSkin = AppPreferences.STYLE_EQUALIZER_2D.equals(style);
         boolean ringSkin = AppPreferences.STYLE_RING.equals(style);
+        boolean showNeonRow = SettingsFragment.CATEGORY_PLAYER.equals(category) && neonSkin;
         boolean showVisualizerRows = SettingsFragment.CATEGORY_PLAYER.equals(category) && (equalizerSkin || ringSkin);
+        binding.neonSkinColorRow.setVisibility(showNeonRow ? View.VISIBLE : View.GONE);
+        binding.neonSkinColorPreview.setBackgroundTintList(ColorStateList.valueOf(
+                NeonColorSettingsController.previewColor(requireContext())));
+        binding.neonSkinColorValue.setText(NeonColorSettingsController.summary(requireContext()));
         binding.equalizerSkinBackgroundRow.setVisibility(showVisualizerRows ? View.VISIBLE : View.GONE);
         binding.equalizerSkinBarsRow.setVisibility(showVisualizerRows ? View.VISIBLE : View.GONE);
         binding.fftIntensityCard.setVisibility(showVisualizerRows ? View.VISIBLE : View.GONE);
+        // Visualizer skins own their background renderer and only support a solid background color.
+        // Hide the generic player scene/palette controls so they cannot suggest unsupported effects.
+        if (SettingsFragment.CATEGORY_PLAYER.equals(category)) {
+            int genericBackgroundVisibility = showVisualizerRows ? View.GONE : View.VISIBLE;
+            binding.backgroundRow.setVisibility(genericBackgroundVisibility);
+            binding.playerBackgroundColorsRow.setVisibility(genericBackgroundVisibility);
+        }
         int visualizerBackground = ringSkin ? AppPreferences.getRingSkinBackgroundColor(requireContext())
                 : AppPreferences.getEqualizerSkinBackgroundColor(requireContext());
         int visualizerColor = ringSkin ? AppPreferences.getRingSkinColor(requireContext())
@@ -688,7 +722,9 @@ public class SettingsDetailFragment extends Fragment {
         boolean ready = compact ? miniPreviewWebReady : previewWebReady;
         if (!ready) return;
         int previewAccent = AppPreferences.STYLE_RING.equals(style)
-                ? AppPreferences.getRingSkinColor(requireContext()) : accent;
+                ? AppPreferences.getRingSkinColor(requireContext())
+                : AppPreferences.STYLE_NEON.equals(style)
+                ? AppPreferences.getNeonSkinColor(requireContext()) : accent;
         String hex = String.format(Locale.US, "#%06X", previewAccent & 0xFFFFFF);
         String title = compact ? "Tu" : "Tu canción";
         String artist = AppPreferences.libraryArtistsEnabled(requireContext())

@@ -18,7 +18,7 @@ import com.appincreible.musicplayer.themes.AppPreferences;
 
 /** SeekBar táctil con estilos visuales ligeros para Reproduciendo. */
 public final class PlayerProgressSeekBar extends AppCompatSeekBar {
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
     private final Path path = new Path();
     private String progressStyle = AppPreferences.PROGRESS_STYLE_CLASSIC;
     private String progressEmoji = "🎵";
@@ -66,8 +66,26 @@ public final class PlayerProgressSeekBar extends AppCompatSeekBar {
     }
 
     public void setTouchEmphasis(boolean emphasized) {
+        if (touchEmphasis == emphasized) return;
         touchEmphasis = emphasized;
+        if (AppPreferences.PROGRESS_STYLE_EMOJI.equals(progressStyle)) requestLayout();
         invalidate();
+    }
+
+    @Override
+    protected synchronized void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        int desired = getMeasuredHeight();
+        if (AppPreferences.PROGRESS_STYLE_EMOJI.equals(progressStyle)) {
+            configureEmojiPaint();
+            Paint.FontMetrics fm = paint.getFontMetrics();
+            float glyphHeight = fm.descent - fm.ascent;
+            desired = Math.max(desired, Math.round(glyphHeight + getResources().getDimension(R.dimen.space_16)));
+        } else if (AppPreferences.PROGRESS_STYLE_WAVE.equals(progressStyle)) {
+            float amplitude = getResources().getDimension(R.dimen.space_4);
+            desired = Math.max(desired, Math.round(amplitude * 2f + getResources().getDimension(R.dimen.space_16)));
+        }
+        setMeasuredDimension(getMeasuredWidth(), resolveSize(desired, heightMeasureSpec));
     }
 
     @Override
@@ -88,10 +106,11 @@ public final class PlayerProgressSeekBar extends AppCompatSeekBar {
         float thumbRadius = getResources().getDimension(touchEmphasis ? R.dimen.space_8 : R.dimen.space_4);
 
         if (AppPreferences.PROGRESS_STYLE_WAVE.equals(progressStyle)) {
+            // Base y progreso usan exactamente la misma onda para que no se vea una línea "cortada".
             drawWave(canvas, left, right, centerY, inactiveColor, thin);
             canvas.save();
-            canvas.clipRect(left, 0f, progressX, getHeight());
-            drawWave(canvas, left, right, centerY, activeColor, medium);
+            canvas.clipRect(left, 0f, Math.min(right, progressX + medium), getHeight());
+            drawWave(canvas, left, right, centerY, activeColor, thin);
             canvas.restore();
             drawCircleThumb(canvas, progressX, centerY, thumbRadius);
             return;
@@ -116,27 +135,45 @@ public final class PlayerProgressSeekBar extends AppCompatSeekBar {
             return;
         }
 
+        if (AppPreferences.PROGRESS_STYLE_EMOJI.equals(progressStyle)) {
+            configureEmojiPaint();
+            float emojiHalfWidth = paint.measureText(progressEmoji) * 0.5f;
+            float gap = emojiHalfWidth + getResources().getDimension(R.dimen.space_4);
+            float beforeEmoji = Math.max(left, progressX - gap);
+            float afterEmoji = Math.min(right, progressX + gap);
+
+            // Deja aire alrededor del emoji: no hay línea atravesando ni recortando el glifo.
+            if (beforeEmoji > left) {
+                drawLine(canvas, left, beforeEmoji, centerY, inactiveColor, thin);
+                drawLine(canvas, left, beforeEmoji, centerY, activeColor, medium);
+            }
+            if (afterEmoji < right) drawLine(canvas, afterEmoji, right, centerY, inactiveColor, thin);
+            drawEmojiThumb(canvas, progressX, centerY);
+            return;
+        }
+
         drawLine(canvas, left, right, centerY, inactiveColor, thin);
         drawLine(canvas, left, progressX, centerY, activeColor, medium);
-        if (AppPreferences.PROGRESS_STYLE_EMOJI.equals(progressStyle)) {
-            drawEmojiThumb(canvas, progressX, centerY);
-        } else {
-            drawCircleThumb(canvas, progressX, centerY, thumbRadius);
-        }
+        drawCircleThumb(canvas, progressX, centerY, thumbRadius);
     }
 
     private float emojiHorizontalRoom() {
         configureEmojiPaint();
-        float padding = getResources().getDimension(R.dimen.space_4);
-        return Math.max(getResources().getDimension(R.dimen.space_12), paint.measureText(progressEmoji) * 0.5f + padding);
+        float padding = getResources().getDimension(R.dimen.space_8);
+        return Math.max(getResources().getDimension(R.dimen.space_16),
+                paint.measureText(progressEmoji) * 0.5f + padding);
     }
 
     private void configureEmojiPaint() {
+        paint.reset();
+        paint.setAntiAlias(true);
+        paint.setSubpixelText(true);
         paint.setStyle(Paint.Style.FILL);
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setTypeface(Typeface.DEFAULT);
-        float base = getResources().getDimension(R.dimen.text_body);
-        paint.setTextSize(base + (touchEmphasis ? getResources().getDimension(R.dimen.space_4) : 0f));
+        float base = getResources().getDimension(R.dimen.text_title);
+        float touchExtra = touchEmphasis ? getResources().getDimension(R.dimen.space_4) * 0.5f : 0f;
+        paint.setTextSize(base + touchExtra);
         paint.setColor(activeColor);
     }
 
@@ -148,6 +185,9 @@ public final class PlayerProgressSeekBar extends AppCompatSeekBar {
     }
 
     private void drawLine(Canvas canvas, float left, float right, float y, int color, float width) {
+        if (right <= left) return;
+        paint.reset();
+        paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeWidth(width);
@@ -156,21 +196,32 @@ public final class PlayerProgressSeekBar extends AppCompatSeekBar {
     }
 
     private void drawCircleThumb(Canvas canvas, float x, float y, float radius) {
+        paint.reset();
+        paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(activeColor);
         canvas.drawCircle(x, y, radius, paint);
     }
 
     private void drawWave(Canvas canvas, float left, float right, float centerY, int color, float width) {
-        float amplitude = getResources().getDimension(R.dimen.space_4);
-        float wavelength = getResources().getDimension(R.dimen.space_24);
-        float step = Math.max(1f, getResources().getDimension(R.dimen.space_4));
+        float amplitude = getResources().getDimension(R.dimen.space_4) * 0.82f;
+        float targetWavelength = getResources().getDimension(R.dimen.space_24);
+        float span = Math.max(1f, right - left);
+        int cycles = Math.max(1, Math.round(span / Math.max(1f, targetWavelength)));
+        float step = Math.max(1f, getResources().getDimension(R.dimen.space_4) * 0.45f);
+
         path.reset();
         path.moveTo(left, centerY);
-        for (float x = left + step; x <= right; x += step) {
-            float phase = (x - left) / wavelength * (float) (Math.PI * 2.0);
+        for (float x = left + step; x < right; x += step) {
+            float normalized = (x - left) / span;
+            float phase = normalized * cycles * (float) (Math.PI * 2.0);
             path.lineTo(x, centerY + (float) Math.sin(phase) * amplitude);
         }
+        // Los ciclos son enteros: el último punto siempre termina en el centro y la onda queda completa.
+        path.lineTo(right, centerY);
+
+        paint.reset();
+        paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);

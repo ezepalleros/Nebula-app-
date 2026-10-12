@@ -63,7 +63,7 @@ public class RadioFragment extends Fragment {
         adapter = new RadioStationAdapter(new RadioStationAdapter.Listener() {
             @Override public void onStationClick(RadioStation station, int position) {
                 radioViewModel.recordClick(station);
-                playerViewModel.playRadioQueue(adapter.getItemsSnapshot(), position);
+                playerViewModel.playRadioQueue(adapter.getItemsSnapshot(), position, radioViewModel.isFavoritesOnly());
             }
             @Override public void onFavoriteClick(RadioStation station) { radioViewModel.toggleFavorite(station); }
             @Override public void onStationLongPress(RadioStation station) { openEditor(station); }
@@ -153,6 +153,8 @@ public class RadioFragment extends Fragment {
             radioConnectionError = error == null ? "" : error;
             refreshRadioPlaybackUi();
         });
+        playerViewModel.getMediaKey().observe(getViewLifecycleOwner(), mediaKey ->
+                adapter.setActiveMediaKey(mediaKey));
 
         radioViewModel.loadStations();
     }
@@ -166,7 +168,7 @@ public class RadioFragment extends Fragment {
     private void applyAdaptiveRadioSurface() {
         UiPalette palette = UiPalette.fallback(requireContext());
         int requestedAccent = AppPreferences.getPlayerAccentColor(requireContext());
-        int background = ListAppearance.resolveRenderedBackground(requireContext());
+        int background = resolveRadioBackgroundColor(palette.surface, requestedAccent);
         boolean lightBackground = ColorUtils.calculateLuminance(background) > 0.55d;
 
         int backgroundText = UiPalette.readableTextColor(background);

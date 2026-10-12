@@ -18,6 +18,7 @@ import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
 import com.appincreible.musicplayer.player.audio.AudioPreferences;
+import com.appincreible.musicplayer.themes.AppPreferences;
 import com.appincreible.musicplayer.player.service.PlaybackService;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -76,6 +77,7 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
     private boolean applyingSavedModes;
     private List<MediaItem> lastRadioQueue = new ArrayList<>();
     private int lastRadioIndex = C.INDEX_UNSET;
+    private boolean lastRadioQueueFavorites;
 
     private final Player.Listener listener = new Player.Listener() {
         @Override public void onIsPlayingChanged(boolean isPlaying) { publishState(); }
@@ -218,20 +220,24 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
     }
 
     public void playRadioQueue(List<MediaItem> items, int startIndex) {
+        playRadioQueue(items, startIndex, false);
+    }
+
+    public void playRadioQueue(List<MediaItem> items, int startIndex, boolean favoritesQueue) {
         if (items == null || items.isEmpty()) return;
         List<MediaItem> copy = new ArrayList<>(items);
         int safeIndex = Math.max(0, Math.min(startIndex, copy.size() - 1));
-        runWhenReady(() -> startRadioRequest(copy, safeIndex));
+        runWhenReady(() -> startRadioRequest(copy, safeIndex, favoritesQueue));
     }
 
     public void retryRadioConnection() {
         if (lastRadioQueue.isEmpty() || lastRadioIndex == C.INDEX_UNSET) return;
         List<MediaItem> copy = new ArrayList<>(lastRadioQueue);
         int safeIndex = Math.max(0, Math.min(lastRadioIndex, copy.size() - 1));
-        runWhenReady(() -> startRadioRequest(copy, safeIndex));
+        runWhenReady(() -> startRadioRequest(copy, safeIndex, lastRadioQueueFavorites));
     }
 
-    private void startRadioRequest(List<MediaItem> items, int startIndex) {
+    private void startRadioRequest(List<MediaItem> items, int startIndex, boolean favoritesQueue) {
         if (controller == null || items.isEmpty()) return;
         int safeIndex = Math.max(0, Math.min(startIndex, items.size() - 1));
         MediaItem target = items.get(safeIndex);
@@ -242,6 +248,7 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
         radioTargetMediaId = target.mediaId == null ? "" : target.mediaId;
         lastRadioQueue = new ArrayList<>(items);
         lastRadioIndex = safeIndex;
+        lastRadioQueueFavorites = favoritesQueue;
 
         // Radio switching must be immediate: stop cancels the old stream/buffer instead of fading it.
         controller.stop();
@@ -293,6 +300,7 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
         cancelRadioTimeout();
         radioRequestGeneration++;
         radioTargetMediaId = "";
+        lastRadioQueueFavorites = false;
         callback.onRadioConnectionChanged("", RADIO_CONNECTION_IDLE, "");
     }
 
@@ -338,7 +346,9 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
         if (controller == null) return;
         if (isCurrentRadio()) {
             int target = controller.getPreviousMediaItemIndex();
-            if (target != C.INDEX_UNSET) startRadioRequest(snapshotQueue(), target);
+            if (target != C.INDEX_UNSET) {
+                startRadioRequest(snapshotQueue(), target, lastRadioQueueFavorites);
+            }
         } else {
             controller.seekToPreviousMediaItem();
         }
@@ -348,7 +358,14 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
         if (controller == null) return;
         if (isCurrentRadio()) {
             int target = controller.getNextMediaItemIndex();
-            if (target != C.INDEX_UNSET) startRadioRequest(snapshotQueue(), target);
+            if (target == C.INDEX_UNSET && lastRadioQueueFavorites
+                    && AppPreferences.radioFavoritesWrap(appContext)
+                    && controller.getMediaItemCount() > 0) {
+                target = 0;
+            }
+            if (target != C.INDEX_UNSET) {
+                startRadioRequest(snapshotQueue(), target, lastRadioQueueFavorites);
+            }
         } else {
             controller.seekToNextMediaItem();
         }

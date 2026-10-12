@@ -3,6 +3,7 @@ package com.appincreible.musicplayer.player.audio;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.media3.common.AudioAttributes;
@@ -13,6 +14,7 @@ import androidx.media3.common.PlaybackException;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.ShuffleOrder;
+import androidx.media3.session.MediaSession;
 
 import com.appincreible.musicplayer.radio.playback.RadioPlaybackInfo;
 import com.appincreible.musicplayer.power.PowerSaverManager;
@@ -40,6 +42,7 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
     private final List<MediaItem> queue = new ArrayList<>();
     private final Set<String> radioRecoveryAttempts = new HashSet<>();
     private static final int SONG_HISTORY_LIMIT = 200;
+    private static final long PREVIOUS_RESTART_GUARD_MS = 1500L;
     private final List<String> songHistory = new ArrayList<>();
     private final Random shuffleRandom = new Random();
     private int songHistoryCursor = -1;
@@ -47,6 +50,8 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
     private String pendingHistoryAppendId = "";
     private long shuffleSeed = shuffleRandom.nextLong();
     private int[] songShuffleOrder = new int[0];
+    private String previousRestartGuardMediaId = "";
+    private long previousRestartGuardUntilMs;
     private boolean internalPlayerCommand;
     private boolean released;
 
@@ -77,6 +82,10 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
 
     public Player getSessionPlayer() { return logicalPlayer; }
 
+    public void attachMediaSession(MediaSession mediaSession) {
+        logicalPlayer.attachMediaSession(mediaSession);
+    }
+
     Context context() { return appContext; }
     ExoPlayer active() { return activePlayer; }
     ExoPlayer standby() { return standbyPlayer; }
@@ -88,6 +97,7 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
 
     public void setMediaItems(List<MediaItem> mediaItems, int startIndex, long startPositionMs) {
         transitionEngine.cancelForQueueChange();
+        clearPreviousRestartGuard();
         queue.clear();
         radioRecoveryAttempts.clear();
         if (mediaItems != null) queue.addAll(mediaItems);
@@ -119,6 +129,7 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
         for (int i = safeTo - 1; i >= fromIndex; i--) queue.remove(i);
         if (!replacement.isEmpty()) queue.addAll(fromIndex, replacement);
         if (structuralChange) {
+            clearPreviousRestartGuard();
             shuffleSeed = shuffleRandom.nextLong();
             regenerateSongShuffleOrder();
         }
@@ -138,6 +149,92 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
     public void prepare() { internal(activePlayer::prepare); }
     public void play() { transitionEngine.resumeWithFade(); }
     public void pause() { transitionEngine.pauseWithFade(); }
+
+    /** Fast path for hardware media buttons (Bluetooth/headsets/car controls). */
+    public void playFromExternalControl() {
+        transitionEngine.resumeImmediate();
+    }
+
+    /** Hardware pause must acknowledge synchronously, with no fade or delayed runnable. */
+    public void pauseFromExternalControl() {
+        transitionEngine.pauseImmediate();
+    }
+
+    public void togglePlayPauseFromExternalControl() {
+        if (activePlayer.getPlayWhenReady()) pauseFromExternalControl();
+        else playFromExternalControl();
+    }
+
+    public void nextFromExternalControl() {
+        if (queue.isEmpty()) return;
+        if (isSongShuffleNavigationActive()) {
+            int baseCursor = pendingHistoryCursor != C.INDEX_UNSET ? pendingHistoryCursor : songHistoryCursor;
+            if (baseCursor >= 0 && baseCursor + 1 < songHistory.size()) {
+                int targetCursor = baseCursor + 1;
+                int targetIndex = findQueueIndex(songHistory.get(targetCursor));
+                if (targetIndex != C.INDEX_UNSET) {
+                    pendingHistoryCursor = targetCursor;
+                    pendingHistoryAppendId = "";
+                    performExternalImmediateTransition(targetIndex, 0L);
+                }
+                return;
+            }
+            int targetIndex = activePlayer.getNextMediaItemIndex();
+            if (targetIndex == C.INDEX_UNSET || targetIndex == activePlayer.getCurrentMediaItemIndex()) return;
+            markHistoryAppend(queue.get(targetIndex).mediaId);
+            performExternalImmediateTransition(targetIndex, 0L);
+            return;
+        }
+        int targetIndex = activePlayer.getNextMediaItemIndex();
+        if (targetIndex != C.INDEX_UNSET && targetIndex != activePlayer.getCurrentMediaItemIndex()) {
+            performExternalImmediateTransition(targetIndex, 0L);
+        }
+    }
+
+    public void previousFromExternalControl() {
+        MediaItem current = activePlayer.getCurrentMediaItem();
+        if (!isSong(current)) {
+            int targetIndex = activePlayer.getPreviousMediaItemIndex();
+            if (targetIndex != C.INDEX_UNSET && targetIndex != activePlayer.getCurrentMediaItemIndex()) {
+                performExternalImmediateTransition(targetIndex, 0L);
+            }
+            return;
+        }
+
+        boolean restartMode = AppPreferences.previousRestartsAfterThreeSeconds(appContext);
+        String mediaId = current.mediaId == null ? "" : current.mediaId;
+        long now = SystemClock.elapsedRealtime();
+        boolean restartJustRequested = restartMode
+                && mediaId.equals(previousRestartGuardMediaId)
+                && now <= previousRestartGuardUntilMs;
+
+        if (restartMode && activePlayer.getCurrentPosition() >= 3000L && !restartJustRequested) {
+            previousRestartGuardMediaId = mediaId;
+            previousRestartGuardUntilMs = now + PREVIOUS_RESTART_GUARD_MS;
+            seekTo(0L);
+            return;
+        }
+
+        clearPreviousRestartGuard();
+        if (isSongShuffleNavigationActive()) {
+            int baseCursor = pendingHistoryCursor != C.INDEX_UNSET ? pendingHistoryCursor : songHistoryCursor;
+            if (baseCursor <= 0) return;
+            int targetCursor = baseCursor - 1;
+            int targetIndex = findQueueIndex(songHistory.get(targetCursor));
+            if (targetIndex == C.INDEX_UNSET) return;
+            pendingHistoryCursor = targetCursor;
+            pendingHistoryAppendId = "";
+            performExternalImmediateTransition(targetIndex, 0L);
+            return;
+        }
+
+        int targetIndex = activePlayer.getPreviousMediaItemIndex();
+        if (targetIndex != C.INDEX_UNSET && targetIndex != activePlayer.getCurrentMediaItemIndex()) {
+            performExternalImmediateTransition(targetIndex, 0L);
+        } else {
+            seekTo(0L);
+        }
+    }
 
     public void stop() {
         transitionEngine.cancelForQueueChange();
@@ -163,6 +260,47 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
             markHistoryAppend(targetItem.mediaId);
         }
         performManualTransition(target, positionMs);
+    }
+
+    void handlePreviousSong() {
+        MediaItem current = activePlayer.getCurrentMediaItem();
+        if (!isSong(current)) return;
+
+        boolean restartMode = AppPreferences.previousRestartsAfterThreeSeconds(appContext);
+        String mediaId = current.mediaId == null ? "" : current.mediaId;
+        long now = SystemClock.elapsedRealtime();
+        boolean restartJustRequested = restartMode
+                && mediaId.equals(previousRestartGuardMediaId)
+                && now <= previousRestartGuardUntilMs;
+
+        if (restartMode && activePlayer.getCurrentPosition() >= 3000L && !restartJustRequested) {
+            previousRestartGuardMediaId = mediaId;
+            previousRestartGuardUntilMs = now + PREVIOUS_RESTART_GUARD_MS;
+            seekTo(0L);
+            return;
+        }
+
+        clearPreviousRestartGuard();
+        if (isSongShuffleNavigationActive()) {
+            seekToPreviousSongInHistory();
+            return;
+        }
+
+        int targetIndex = activePlayer.getPreviousMediaItemIndex();
+        if (targetIndex != C.INDEX_UNSET && targetIndex != activePlayer.getCurrentMediaItemIndex()) {
+            manualTransitionTo(targetIndex, 0L);
+        } else {
+            seekTo(0L);
+        }
+    }
+
+    private void clearPreviousRestartGuard() {
+        previousRestartGuardMediaId = "";
+        previousRestartGuardUntilMs = 0L;
+    }
+
+    boolean isCurrentSong() {
+        return isSong(activePlayer.getCurrentMediaItem());
     }
 
     void seekToPreviousSongInHistory() {
@@ -198,6 +336,62 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
     boolean isSongShuffleNavigationActive() {
         MediaItem current = activePlayer.getCurrentMediaItem();
         return activePlayer.getShuffleModeEnabled() && isSong(current);
+    }
+
+    private void performExternalImmediateTransition(int target, long positionMs) {
+        if (queue.isEmpty()) return;
+        int safeTarget = Math.max(0, Math.min(target, queue.size() - 1));
+        long safePosition = Math.max(0L, positionMs);
+        MediaItem targetItem = queue.get(safeTarget);
+        boolean keepPlaying = activePlayer.getPlayWhenReady();
+
+        transitionEngine.cancelForQueueChange();
+        clearPreviousRestartGuard();
+
+        if (targetItem.mediaId != null && targetItem.mediaId.startsWith("radio:")) {
+            radioRecoveryAttempts.removeIf(key -> key.startsWith(targetItem.mediaId + "#"));
+            internal(() -> {
+                activePlayer.stop();
+                activeGain.setEnvelopeImmediately(1f);
+                activePlayer.setMediaItems(queue, safeTarget, safePosition);
+                activePlayer.prepare();
+                if (keepPlaying) activePlayer.play();
+            });
+            applyNormalization(activePlayer, activeGain);
+            return;
+        }
+
+        // If the requested song is already preloaded and ready, promote it immediately instead of
+        // throwing that buffer away and seeking the active player again.
+        if (standbyPlayer != null
+                && standbyGain != null
+                && standbyPlayer.getCurrentMediaItemIndex() == safeTarget
+                && standbyPlayer.getPlaybackState() == Player.STATE_READY) {
+            activeGain.setEnvelopeImmediately(0f);
+            standbyGain.setEnvelopeImmediately(keepPlaying ? 1f : 0f);
+            internal(() -> {
+                activePlayer.pause();
+                if (keepPlaying) standbyPlayer.play();
+                else standbyPlayer.pause();
+            });
+            promoteStandby();
+            activeGain.setEnvelopeImmediately(keepPlaying ? 1f : 0f);
+            return;
+        }
+
+        // Fast fallback: seek the currently exposed player directly. This deliberately bypasses
+        // manual two-player fades for external controls so Bluetooth/Auto responds immediately.
+        internal(() -> {
+            if (standbyPlayer != null) {
+                standbyPlayer.pause();
+                standbyPlayer.stop();
+                standbyGain.setEnvelopeImmediately(0f);
+            }
+            activePlayer.seekTo(safeTarget, safePosition);
+            activeGain.setEnvelopeImmediately(keepPlaying ? 1f : 0f);
+            if (keepPlaying) activePlayer.play();
+        });
+        applyNormalization(activePlayer, activeGain);
     }
 
     private void performManualTransition(int target, long positionMs) {
@@ -586,6 +780,7 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
 
         @Override public void onMediaItemTransition(MediaItem mediaItem, int reason) {
             if (player == activePlayer) {
+                clearPreviousRestartGuard();
                 commitSongTransition(mediaItem);
                 applyNormalization(activePlayer, activeGain);
                 transitionEngine.onActiveMediaItemTransition(reason);

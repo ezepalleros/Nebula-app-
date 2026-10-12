@@ -213,7 +213,7 @@
       ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
 
       if(ui.artwork){
-        ctx.save();ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=Math.max(12,w*.040);ctx.shadowOffsetY=Math.max(5,w*.014);
+        ctx.save();ctx.translate(Number(opts.artworkSwipeOffset)||0,0);ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=Math.max(12,w*.040);ctx.shadowOffsetY=Math.max(5,w*.014);
         drawArtwork(ctx,art,m.artX,m.artY,m.artSize,m.artSize,'#202020',Math.max(2,w*.008));ctx.restore();
       }
 
@@ -245,9 +245,19 @@
     // Non-immersive 2D skins: NO CARD / NO OUTER FRAME / NO DUPLICATED TITLE.
     // The native Android title, seekbar and controls remain below this stage.
     if(style==='neon'){
+      const neonPalette=resolveNeonPalette(opts,accent,tick);
       const glow=ctx.createRadialGradient(w*.50,h*.44,w*.04,w*.50,h*.44,w*.60);
-      glow.addColorStop(0,hexToRgba(accent,.22));glow.addColorStop(.62,hexToRgba(accent,.08));glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
-      for(let i=0;i<14;i++){const a=(i/14)*Math.PI*2+(tick*.0004);const rr=Math.min(w,h)*(.36+.025*Math.sin(tick*.001+i));ctx.fillStyle=hexToRgba(accent,i%3===0?.22:.10);ctx.beginPath();ctx.arc(w*.5+Math.cos(a)*rr,h*.43+Math.sin(a)*rr*.65,Math.max(2,w*.007),0,Math.PI*2);ctx.fill();}
+      glow.addColorStop(0,hexToRgba(neonPalette[0],.24));
+      glow.addColorStop(.42,hexToRgba(neonPalette[1],.13));
+      glow.addColorStop(.72,hexToRgba(neonPalette[2],.07));
+      glow.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
+      for(let i=0;i<14;i++){
+        const a=(i/14)*Math.PI*2+(tick*.0004);
+        const rr=Math.min(w,h)*(.36+.025*Math.sin(tick*.001+i));
+        ctx.fillStyle=hexToRgba(neonPalette[i%neonPalette.length],i%3===0?.24:.11);
+        ctx.beginPath();ctx.arc(w*.5+Math.cos(a)*rr,h*.43+Math.sin(a)*rr*.65,Math.max(2,w*.007),0,Math.PI*2);ctx.fill();
+      }
     } else if(style==='glass'){
       const g1=ctx.createRadialGradient(w*.20,h*.18,0,w*.20,h*.18,w*.52);g1.addColorStop(0,'rgba(77,189,255,.20)');g1.addColorStop(1,'rgba(77,189,255,0)');ctx.fillStyle=g1;ctx.fillRect(0,0,w,h);
       const g2=ctx.createRadialGradient(w*.82,h*.72,0,w*.82,h*.72,w*.45);g2.addColorStop(0,hexToRgba(accent,.16));g2.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g2;ctx.fillRect(0,0,w,h);
@@ -258,7 +268,8 @@
     const maxArtW=w*(style==='minimal'?.82:.925),maxArtH=h*.82,artSize=Math.min(maxArtW,maxArtH);
     const artX=(w-artSize)/2,artY=h*.055;
     ctx.save();
-    if(style==='neon'){ctx.shadowColor=accent;ctx.shadowBlur=Math.max(18,w*.055);}
+    ctx.translate(Number(opts.artworkSwipeOffset)||0,0);
+    if(style==='neon'){ctx.shadowColor=resolveNeonPalette(opts,accent,tick)[0];ctx.shadowBlur=Math.max(18,w*.055);}
     else if(style==='glass'){ctx.shadowColor='rgba(120,200,255,.32)';ctx.shadowBlur=Math.max(14,w*.040);}
     else {ctx.shadowColor='rgba(0,0,0,.30)';ctx.shadowBlur=Math.max(10,w*.030);}
     drawArtwork(ctx,art,artX,artY,artSize,artSize,accent,artworkRadius(opts.artworkShape,artSize,artSize,style==='minimal'?8:Math.max(12,w*.035)));
@@ -320,6 +331,29 @@
     const n=parseInt(value.length===3?value.split('').map(x=>x+x).join(''):value,16);
     if(!Number.isFinite(n)) return 'rgba(139,92,246,'+alpha+')';
     return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+alpha+')';
+  }
+
+  function resolveNeonPalette(opts,accent,tick){
+    const mode=(opts&&opts.neonMode)||'accent';
+    const colors=(opts&&Array.isArray(opts.neonColors)?opts.neonColors:[]).filter(Boolean);
+    const fallback=colors[0]||accent||'#8B5CF6';
+    if(mode==='player_rainbow'){
+      const base=((Number(tick)||0)*.018)%360;
+      return [hslToHex(base,92,60),hslToHex((base+120)%360,92,60),hslToHex((base+240)%360,92,60)];
+    }
+    if(mode==='gradient2') return [colors[0]||fallback,colors[1]||fallback,colors[0]||fallback];
+    if(mode==='gradient3') return [colors[0]||fallback,colors[1]||fallback,colors[2]||fallback];
+    return [fallback,fallback,fallback];
+  }
+
+  function hslToHex(h,s,l){
+    s/=100;l/=100;
+    const c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs((h/60)%2-1)),m=l-c/2;
+    let r=0,g=0,b=0;
+    if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;b=x;}
+    else if(h<240){g=x;b=c;}else if(h<300){r=x;b=c;}else{r=c;b=x;}
+    const toHex=v=>Math.round((v+m)*255).toString(16).padStart(2,'0');
+    return '#'+toHex(r)+toHex(g)+toHex(b);
   }
 
   function get2DControlAt(style,nx,ny,aspect,uiState){

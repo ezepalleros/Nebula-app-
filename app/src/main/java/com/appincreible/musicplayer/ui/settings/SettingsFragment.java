@@ -73,7 +73,7 @@ public class SettingsFragment extends Fragment implements ListAppearance.Listene
         binding.categoriesContainer.removeAllViews();
         addCategory(CATEGORY_APPEARANCE, "Apariencia", R.drawable.ic_settings);
         addCategory(CATEGORY_NAVIGATION, "Navegación", R.drawable.ic_home);
-        addCategory(CATEGORY_PLAYER, "Reproductor", R.drawable.ic_music);
+        addCategory(CATEGORY_PLAYER, "Reproductor", R.drawable.ic_player_skin);
         addCategory(CATEGORY_AUDIO, "Audio", R.drawable.ic_notification_music);
         addCategory(CATEGORY_RADIO, "Radio", R.drawable.ic_radio);
         addCategory(CATEGORY_LIBRARY, "Biblioteca", R.drawable.ic_library);

@@ -6,6 +6,7 @@ import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import androidx.annotation.Nullable;
 import androidx.media3.common.Player;
@@ -24,6 +25,9 @@ public class PlaybackService extends MediaSessionService {
     private static final String TAG = "PlaybackService";
     private static final String PLAYBACK_CHANNEL_ID = "appincreible_playback_v2";
     private static final int PLAYBACK_NOTIFICATION_ID = 2101;
+    // Legacy wired/Bluetooth headset hook. Using the platform keycode value keeps
+    // this compatible with SDK stubs where KEYCODE_HEADSETOOK is not exposed.
+    private static final int KEYCODE_HEADSET_HOOK = 79;
 
     private AudioEngine audioEngine;
     private MediaSession mediaSession;
@@ -64,7 +68,60 @@ public class PlaybackService extends MediaSessionService {
 
         mediaSession = new MediaSession.Builder(this, sessionPlayer)
                 .setSessionActivity(sessionActivity)
+                .setCallback(new MediaSession.Callback() {
+                    @Override
+                    public boolean onMediaButtonEvent(MediaSession session,
+                                                      MediaSession.ControllerInfo controllerInfo,
+                                                      Intent intent) {
+                        if (!Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction()) || audioEngine == null) {
+                            return false;
+                        }
+                        KeyEvent event = intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                        if (event == null || !isFastMediaKey(event.getKeyCode())) return false;
+
+                        // Consume ACTION_UP and key repeats too. The action itself runs once on the
+                        // first ACTION_DOWN so legacy Bluetooth stacks cannot debounce it for seconds.
+                        if (event.getAction() != KeyEvent.ACTION_DOWN || event.getRepeatCount() > 0) {
+                            return true;
+                        }
+
+                        switch (event.getKeyCode()) {
+                            case KeyEvent.KEYCODE_MEDIA_PLAY:
+                                audioEngine.playFromExternalControl();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_PAUSE:
+                                audioEngine.pauseFromExternalControl();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+                            case KEYCODE_HEADSET_HOOK:
+                                audioEngine.togglePlayPauseFromExternalControl();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_NEXT:
+                                audioEngine.nextFromExternalControl();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                                audioEngine.previousFromExternalControl();
+                                return true;
+                            case KeyEvent.KEYCODE_MEDIA_STOP:
+                                audioEngine.stop();
+                                return true;
+                            default:
+                                return false;
+                        }
+                    }
+                })
                 .build();
+        audioEngine.attachMediaSession(mediaSession);
+    }
+
+    private static boolean isFastMediaKey(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_MEDIA_PLAY
+                || keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE
+                || keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+                || keyCode == KEYCODE_HEADSET_HOOK
+                || keyCode == KeyEvent.KEYCODE_MEDIA_NEXT
+                || keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS
+                || keyCode == KeyEvent.KEYCODE_MEDIA_STOP;
     }
 
     private void ensurePlaybackChannel() {
