@@ -19,6 +19,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.appincreible.musicplayer.data.model.Song;
@@ -33,6 +34,8 @@ import java.util.concurrent.Executors;
 public final class LyricsEditorUi {
     public interface Playback {
         long position();
+        long duration();
+        void seekTo(long position);
         void pauseToggle();
         void rewindThreeSeconds();
     }
@@ -54,8 +57,15 @@ public final class LyricsEditorUi {
     private LrcLyrics lyrics;
     private String lyricsOrigin = "";
     private int lastLine = -2;
+    // SharedPreferences stores the correction by media key, never in the original LRC.
+    private static final String TIMING_OFFSET_PREFIX = "lyrics_timing_offset_v1_";
+    private long timingOffsetMs = 0L;
     private boolean fullscreenHost = false;
     private boolean immersiveLimitedHost = false;
+    private boolean xpScreenHost = false;
+    private boolean phoneScreenHost = false;
+    private int xpTopInsetPx = 0;
+    private int xpBottomInsetPx = 0;
     private final java.util.Map<View, Integer> artworkVisibility = new java.util.LinkedHashMap<>();
     private SharedPreferences.OnSharedPreferenceChangeListener lyricsPrefListener;
 
@@ -90,6 +100,22 @@ public final class LyricsEditorUi {
         updateOverlayBounds();
     }
 
+    /** Limita el visor XP al área negra de XpSkin.geometry(), sin alterar Spotify. */
+    public void setXpScreenHost(boolean enabled, int topInsetPx, int bottomInsetPx) {
+        xpScreenHost = enabled;
+        xpTopInsetPx = Math.max(0, topInsetPx);
+        xpBottomInsetPx = Math.max(0, bottomInsetPx);
+        updateOverlayBounds();
+    }
+
+    /** Letras en Teléfono clásico: debajo del título y antes del panel de progreso. */
+    public void setPhoneScreenHost(boolean enabled, int topInsetPx, int bottomInsetPx) {
+        phoneScreenHost = enabled;
+        xpTopInsetPx = Math.max(0, topInsetPx);
+        xpBottomInsetPx = Math.max(0, bottomInsetPx);
+        updateOverlayBounds();
+    }
+
     public void setSeekBoundary(@Nullable View seekBar) {
         seekBoundary = seekBar;
         updateOverlayBounds();
@@ -98,7 +124,49 @@ public final class LyricsEditorUi {
     private void updateOverlayBounds() {
         if (overlay == null || stage == null) return;
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-1, -1);
-        if (!fullscreenHost && immersiveLimitedHost) {
+        if (phoneScreenHost && !fullscreenHost) {
+            // PhoneSkin dibuja una LCD adaptable a toda la pantalla. Mantener
+            // exactamente la misma geometría: desde debajo de «Reproductor»
+            // hasta el inicio del panel de progreso (sin taparlo).
+            int width = stage.getWidth() > 0 ? stage.getWidth()
+                    : context.getResources().getDisplayMetrics().widthPixels;
+            int height = stage.getHeight() > 0 ? stage.getHeight()
+                    : context.getResources().getDisplayMetrics().heightPixels;
+            float unit = width / 300f;
+            float logicalHeight = height / unit;
+            float top = Math.max(0f, xpTopInsetPx / unit) + 2f;
+            float bottom = Math.max(top + 300f,
+                    logicalHeight - Math.max(0f, xpBottomInsetPx / unit) - 2f);
+            float available = bottom - top;
+            // Coincidir con PhoneSkin.layout(): seekY = 55 + contentHeight * 0.76.
+            // Letras termina ANTES del panel de progreso; nunca lo cubre.
+            float softKeysY = available - 145f; // Panel inferior 118 + teclas blandas 27
+            float contentHeight = Math.max(110f, softKeysY - 55f);
+            float seekY = 55f + contentHeight * 0.76f;
+            lp.gravity = Gravity.TOP | Gravity.START;
+            lp.leftMargin = Math.round(4f * unit);
+            lp.topMargin = Math.round((top + 55f) * unit);
+            lp.width = Math.round(292f * unit);
+            lp.height = Math.round(Math.max(1f, seekY - 55f - 4f) * unit);
+        } else if (xpScreenHost && !fullscreenHost) {
+            // Misma geometría lógica de 270 px que dibuja el canvas de XP.
+            // El host es la raíz del reproductor y ya contiene el borde del sistema.
+            int width = stage.getWidth() > 0 ? stage.getWidth()
+                    : context.getResources().getDisplayMetrics().widthPixels;
+            int height = stage.getHeight() > 0 ? stage.getHeight()
+                    : context.getResources().getDisplayMetrics().heightPixels;
+            float unit = width / 270f;
+            float logicalHeight = height / unit;
+            float titleTop = Math.max(14f, xpTopInsetPx / unit + 5f);
+            float blackY = titleTop + 61f;
+            float blackHeight = Math.max(80f, logicalHeight - xpBottomInsetPx / unit
+                    - 10f - blackY - 102f);
+            lp.gravity = Gravity.TOP | Gravity.START;
+            lp.leftMargin = Math.round(16f * unit);
+            lp.topMargin = Math.round(blackY * unit);
+            lp.width = Math.round(238f * unit);
+            lp.height = Math.round(blackHeight * unit);
+        } else if (!fullscreenHost && immersiveLimitedHost) {
             // Usar altura real del host, nunca toda la pantalla. Spotify dibuja
             // el seek dentro del canvas, en la parte inferior.
             int hostHeight = stage.getHeight() > 0 ? stage.getHeight()
@@ -116,7 +184,7 @@ public final class LyricsEditorUi {
         // No ocupar el área táctil de la barra de progreso en modo normal.
         // Medir posiciones reales, no proporciones fijas: los skins inmersivos
         // colocan el progreso a distintas alturas.
-        if (!fullscreenHost && seekBoundary != null && seekBoundary.isShown()
+        if (!xpScreenHost && !phoneScreenHost && !fullscreenHost && seekBoundary != null && seekBoundary.isShown()
                 && seekBoundary.getHeight() > 0 && stage.getHeight() > 0) {
             int[] hostAt = new int[2];
             int[] seekAt = new int[2];
@@ -278,11 +346,16 @@ public final class LyricsEditorUi {
     }
 
     private void showLyricsActions() {
+        boolean timed = lyrics != null && lyrics.synchronizedLines && !lyrics.lines.isEmpty();
+        String[] actions = timed
+                ? new String[]{"Buscar letra", "Editar letra", "Sincronizar", "Volver a la letra original"}
+                : new String[]{"Buscar letra", "Editar letra", "Volver a la letra original"};
         new MaterialAlertDialogBuilder(context)
                 .setTitle("Opciones de letra")
-                .setItems(new String[]{"Buscar letra", "Editar letra", "Volver a la letra original"}, (dialog, which) -> {
+                .setItems(actions, (dialog, which) -> {
                     if (which == 0) lookupManual();
                     else if (which == 1) edit();
+                    else if (timed && which == 2) synchronize();
                     else restoreOriginal();
                 })
                 .setNegativeButton("Cancelar", null)
@@ -473,6 +546,8 @@ public final class LyricsEditorUi {
         if (key == null) song = null;
         if (java.util.Objects.equals(songKey, key)) return;
         songKey = key;
+        timingOffsetMs = key == null ? 0L : AppPreferences.prefs(context)
+                .getLong(TIMING_OFFSET_PREFIX + key, 0L);
         lastStaticScrollKey = null;
         lyrics = null;
         lyricsOrigin = "";
@@ -590,7 +665,10 @@ public final class LyricsEditorUi {
     public void toggle() { if (isVisible()) hide(); else show(); }
     public void tick(long positionMs) {
         if (!isVisible() || lyrics == null || !lyrics.synchronizedLines || content == null) return;
-        int active = lyrics.activeLineAt(positionMs, 0);
+        // Conservar todo el desfase, incluso cuando adelanta líneas antes de 0:00.
+        // El visor compara contra la posición real (>= 0): las líneas desplazadas
+        // antes del inicio se consideran ya transcurridas, sin generar tiempos negativos.
+        int active = lyrics.activeLineAt(Math.max(0L, positionMs), timingOffsetMs);
         SharedPreferences viewPrefs = AppPreferences.prefs(context);
         String mode = viewPrefs.getString("lyrics_view_mode", "full");
         if ("cover".equals(mode)) return;
@@ -795,42 +873,161 @@ public final class LyricsEditorUi {
             confirm.show();
         } else action.run();
     }
+    /** Ajuste global de una letra YA sincronizada; jamás modifica las marcas del LRC. */
     private void synchronize() {
-        if (songKey == null || lyrics == null || lyrics.lines.isEmpty()) { toast("Primero escribí una letra"); return; }
-        StringBuilder plain = new StringBuilder();
-        for (LrcLyrics.Line line : lyrics.lines) plain.append(line.text).append('\n');
-        ManualLyricsSession session = new ManualLyricsSession(plain.toString());
+        if (songKey == null || lyrics == null || !lyrics.synchronizedLines || lyrics.lines.isEmpty()) return;
+        final String key = songKey;
+        final LrcLyrics currentLyrics = lyrics;
+        LrcLyrics.Line first = currentLyrics.lines.get(0);
+        for (LrcLyrics.Line candidate : currentLyrics.lines) {
+            if (!candidate.text.trim().isEmpty()) { first = candidate; break; }
+        }
+        final long firstMs = first.timeMs;
+        // La marca manual puede representar un inicio anterior a 0:00 al ajustar hacia atrás.
+        // La reproducción y el seek permanecen >= 0; el LRC original no se modifica.
+        final long[] markMs = {firstMs + timingOffsetMs};
+        final boolean[] marked = {timingOffsetMs != 0L};
+        final boolean[] dragging = {false};
+        // Mantener la posición recién buscada hasta que la posición observada la alcance.
+        final long[] seekPendingUntil = {0L};
+        final long duration = Math.min(Integer.MAX_VALUE, Math.max(0L, playback.duration()));
+
         LinearLayout panel = new LinearLayout(context);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(16), dp(12), dp(16), dp(10));
-        TextView line = new TextView(context);
-        line.setTextSize(22);
-        line.setGravity(Gravity.CENTER);
-        panel.addView(line, new LinearLayout.LayoutParams(-1, dp(130)));
+        panel.setPadding(dp(18), dp(10), dp(18), dp(6));
+        TextView firstLine = new TextView(context);
+        firstLine.setText("Primera oración:\n“" + first.text + "”");
+        firstLine.setTextSize(17);
+        firstLine.setTextColor(0xFFF5F1FF);
+        firstLine.setMaxLines(4);
+        firstLine.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        panel.addView(firstLine);
+        TextView currentTime = new TextView(context);
+        currentTime.setTextSize(15);
+        currentTime.setPadding(0, dp(18), 0, dp(4));
+        currentTime.setTextColor(0xFFDFD8F8);
+        panel.addView(currentTime);
+
+        SeekBar seek = new SeekBar(context);
+        seek.setMax((int) duration);
+        seek.setEnabled(duration > 0);
+        panel.addView(seek, new LinearLayout.LayoutParams(-1, dp(46)));
+        if (duration == 0L) {
+            TextView help = new TextView(context);
+            help.setText("Usá los controles de reproducción para avanzar.");
+            help.setTextSize(12);
+            panel.addView(help);
+        }
+        Button playbackButton = new Button(context);
+        playbackButton.setAllCaps(false);
+        playbackButton.setText("Pausar / seguir");
+        panel.addView(playbackButton);
+        playbackButton.setOnClickListener(v -> playback.pauseToggle());
+
         Button mark = new Button(context);
-        mark.setText("MARCAR INICIO DE LÍNEA");
+        mark.setAllCaps(false);
+        mark.setText("Marcar aquí");
         panel.addView(mark);
-        LinearLayout actions = new LinearLayout(context);
-        panel.addView(actions);
-        button(actions, "Pausar / seguir", playback::pauseToggle);
-        button(actions, "−3 s", playback::rewindThreeSeconds);
-        Button undo = new Button(context);
-        undo.setText("Deshacer");
-        panel.addView(undo);
-        final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(context)
-                .setTitle("Sincronizar tocando").setView(panel)
-                .setNegativeButton("Cancelar", null).setPositiveButton("Terminar", null).create();
-        Runnable update = () -> line.setText(session.isFinished() ? "Todas las líneas marcadas" :
-                (session.nextIndex() + 1) + "/" + session.lineCount() + "\n" + session.currentLine());
-        mark.setOnClickListener(v -> { if (!session.mark(playback.position())) toast("Tiempo anterior a la marca previa"); update.run(); });
-        undo.setOnClickListener(v -> { session.undo(); update.run(); });
-        dialog.setOnShowListener(d -> dialog.getButton(-1).setOnClickListener(v -> {
-            if (!session.isFinished()) { toast("Faltan líneas por marcar"); return; }
-            String result = session.toLrc();
-            dialog.dismiss();
-            save(result);
-        }));
-        update.run(); dialog.show();
+        TextView offsetLabel = new TextView(context);
+        offsetLabel.setTextSize(18);
+        offsetLabel.setGravity(Gravity.CENTER);
+        offsetLabel.setPadding(0, dp(12), 0, dp(8));
+        panel.addView(offsetLabel);
+        LinearLayout fine = new LinearLayout(context);
+        panel.addView(fine);
+        Runnable update = () -> offsetLabel.setText(marked[0]
+                ? "Desfase: " + String.format(java.util.Locale.forLanguageTag("es-AR"),
+                        "%+.1f s", (markMs[0] - firstMs) / 1000.0)
+                : "Desfase: tocá «Marcar aquí»");
+        button(fine, "−0,1 s", () -> {
+            long base = marked[0] ? markMs[0] : Math.max(0L, playback.position());
+            markMs[0] = base <= Long.MIN_VALUE + 100L ? Long.MIN_VALUE : base - 100L;
+            marked[0] = true;
+            update.run();
+        });
+        button(fine, "+0,1 s", () -> {
+            long base = marked[0] ? markMs[0] : Math.max(0L, playback.position());
+            markMs[0] = base >= Long.MAX_VALUE - 100L ? Long.MAX_VALUE : base + 100L;
+            marked[0] = true;
+            update.run();
+        });
+        mark.setOnClickListener(v -> {
+            long at = Math.max(0L, android.os.SystemClock.uptimeMillis() < seekPendingUntil[0]
+                    ? seek.getProgress() : playback.position());
+            markMs[0] = at;
+            marked[0] = true;
+            update.run();
+        });
+
+        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onStartTrackingTouch(SeekBar bar) { dragging[0] = true; }
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                if (fromUser) currentTime.setText("Tiempo: " + formatSyncTime(progress));
+            }
+            @Override public void onStopTrackingTouch(SeekBar bar) {
+                if (key.equals(songKey) && currentLyrics == lyrics) {
+                    seekPendingUntil[0] = android.os.SystemClock.uptimeMillis() + 1200L;
+                    playback.seekTo(bar.getProgress());
+                }
+                dragging[0] = false;
+            }
+        });
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(context)
+                .setTitle("Sincronizar letra")
+                .setView(panel)
+                .setNegativeButton("Cancelar", null)
+                .setNeutralButton("Reiniciar", null)
+                .setPositiveButton("Aplicar", null)
+                .create();
+        // Actualizar el reloj mientras el diálogo esté abierto, no en segundo plano.
+        final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        final Runnable[] ticker = new Runnable[1];
+        ticker[0] = () -> {
+            if (!dialog.isShowing()) return;
+            if (!key.equals(songKey) || currentLyrics != lyrics) { dialog.dismiss(); return; }
+            long pos = Math.max(0L, playback.position());
+            if (!dragging[0]) {
+                boolean waitingForSeek = android.os.SystemClock.uptimeMillis() < seekPendingUntil[0];
+                long shown = waitingForSeek ? seek.getProgress() : pos;
+                currentTime.setText("Tiempo: " + formatSyncTime(shown));
+                if (!waitingForSeek && duration > 0L) seek.setProgress((int) Math.min(duration, pos));
+            }
+            handler.postDelayed(ticker[0], 250L);
+        };
+        dialog.setOnDismissListener(d -> handler.removeCallbacks(ticker[0]));
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                if (!key.equals(songKey) || currentLyrics != lyrics) { dialog.dismiss(); return; }
+                if (!marked[0]) { toast("Primero marcá el inicio de la oración"); return; }
+                persistTimingOffset(key, markMs[0] - firstMs);
+                dialog.dismiss();
+            });
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+                if (!key.equals(songKey) || currentLyrics != lyrics) { dialog.dismiss(); return; }
+                persistTimingOffset(key, 0L);
+                dialog.dismiss();
+            });
+            handler.post(ticker[0]);
+        });
+        update.run();
+        dialog.show();
+    }
+
+    private static String formatSyncTime(long millis) {
+        long t = Math.max(0L, millis);
+        return String.format(java.util.Locale.US, "%02d:%02d.%01d",
+                t / 60000L, (t / 1000L) % 60L, (t % 1000L) / 100L);
+    }
+
+    private void persistTimingOffset(String key, long value) {
+        if (!key.equals(songKey)) return;
+        SharedPreferences.Editor editor = AppPreferences.prefs(context).edit();
+        if (value == 0L) editor.remove(TIMING_OFFSET_PREFIX + key);
+        else editor.putLong(TIMING_OFFSET_PREFIX + key, value);
+        editor.apply();
+        timingOffsetMs = value;
+        lastLine = -2;
+        tick(playback.position());
     }
     private void button(LinearLayout row, String label, Runnable action) {
         Button b = new Button(context);

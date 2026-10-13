@@ -59,6 +59,8 @@ public class SettingsDetailFragment extends Fragment {
     private boolean miniPreviewWebReady;
     private final PlayerStylePicker stylePicker = new PlayerStylePicker();
     private PowerSaverSettingsController powerSaverSettings;
+    private XpSkinSettingsController xpSkinSettings;
+    private PhoneSkinSettingsController phoneSkinSettings;
     private PlaybackOrderSettingsController playbackOrderSettings;
     private LibrarySourceFoldersController librarySourceFoldersController;
     private SharedPreferences audioPrefs;
@@ -95,7 +97,10 @@ public class SettingsDetailFragment extends Fragment {
         configureCategoryVisibility();
         if (SettingsFragment.CATEGORY_PLAYER.equals(category)) {
             setupPreviewWebViews();
-            
+            xpSkinSettings = new XpSkinSettingsController(requireContext(), binding.styleRow, this::refreshSummary);
+            xpSkinSettings.attach();
+            phoneSkinSettings = new PhoneSkinSettingsController(requireContext(), binding.styleRow, this::refreshSummary);
+            phoneSkinSettings.attach();
         }
         refreshSummary();
 
@@ -112,6 +117,7 @@ public class SettingsDetailFragment extends Fragment {
             WriteTagsSettingsController.attach(requireContext(), binding.writeTagsToFilesCard, binding.writeTagsToFilesSwitch);
             librarySourceFoldersController = new LibrarySourceFoldersController(requireContext(), binding.librarySourceFoldersContainer);
             librarySourceFoldersController.refresh();
+            ArtworkOnlineSettingsController.attach(requireContext(), binding.settingsHeader);
         }
 
         binding.styleRow.setOnClickListener(v -> showStylePicker());
@@ -622,6 +628,8 @@ public class SettingsDetailFragment extends Fragment {
         int accent = AppPreferences.getPlayerAccentColor(requireContext());
 
         binding.styleValue.setText(styleName);
+        if (xpSkinSettings != null) xpSkinSettings.refresh();
+        if (phoneSkinSettings != null) phoneSkinSettings.refresh();
         boolean neonSkin = AppPreferences.STYLE_NEON.equals(style);
         boolean equalizerSkin = AppPreferences.STYLE_EQUALIZER_2D.equals(style);
         boolean ringSkin = AppPreferences.STYLE_RING.equals(style);
@@ -703,6 +711,7 @@ public class SettingsDetailFragment extends Fragment {
         binding.progressStyleRow.setEnabled(progressVisible);
         binding.progressStyleRow.setAlpha(progressVisible ? 1f : 0.52f);
         binding.playerAppearancePreview.applyPreferences();
+        if (SettingsFragment.CATEGORY_PLAYER.equals(category)) updateXpVisibilityOptions(style);
 
         binding.accentPreview.setBackgroundTintList(ColorStateList.valueOf(accent));
         binding.accentValue.setText(AppPreferences.useCustomAccent(requireContext())
@@ -780,6 +789,23 @@ public class SettingsDetailFragment extends Fragment {
         String artist = AppPreferences.libraryArtistsEnabled(requireContext())
                 ? (compact ? "Art" : "Tu artista")
                 : (compact ? "Álb" : "Tu álbum");
+        if (AppPreferences.STYLE_PHONE_2D.equals(style)) {
+            webView.evaluateJavascript("Player3D.setPhoneOptions("
+                    + org.json.JSONObject.quote(AppPreferences.getPhoneTheme(requireContext())) + ","
+                    + org.json.JSONObject.quote(AppPreferences.getPhoneTitle(requireContext())) + ","
+                    + AppPreferences.PHONE_PIXEL.equals(AppPreferences.getPhoneAppearance(requireContext())) + ","
+                    + AppPreferences.isPhoneLcdEnabled(requireContext()) + ","
+                    + org.json.JSONObject.quote(AppPreferences.getPhoneCard(requireContext())) + ")", null);
+        }
+        if (AppPreferences.STYLE_XP_2D.equals(style)) {
+            String desktop = String.format(Locale.US, "#%06X", AppPreferences.getXpDesktopColor(requireContext()) & 0xFFFFFF);
+            webView.evaluateJavascript("Player3D.setXpOptions("
+                    + org.json.JSONObject.quote(AppPreferences.getXpTheme(requireContext())) + ","
+                    + org.json.JSONObject.quote(desktop) + ","
+                    + org.json.JSONObject.quote(AppPreferences.getXpTitle(requireContext())) + ","
+                    + AppPreferences.XP_PIXEL.equals(AppPreferences.getXpAppearance(requireContext())) + ","
+                    + org.json.JSONObject.quote(AppPreferences.getXpDisplay(requireContext())) + ")", null);
+        }
         webView.evaluateJavascript("Player3D.setSkin(" + org.json.JSONObject.quote(style) + ")", null);
         webView.evaluateJavascript("Player3D.setAccent(" + org.json.JSONObject.quote(hex) + ")", null);
         webView.evaluateJavascript("Player3D.setAnimation(" + (compact ? "0" : String.valueOf(AppPreferences.getAnimationMultiplier(requireContext()))) + ")", null);
@@ -789,6 +815,34 @@ public class SettingsDetailFragment extends Fragment {
                 + org.json.JSONObject.quote("") + ")", null);
         webView.evaluateJavascript("Player3D.setPreviewMode(" + compact + ")", null);
         webView.evaluateJavascript("Player3D.setAppVisible(true)", null);
+    }
+
+    private void updateXpVisibilityOptions(String style) {
+        boolean phone = AppPreferences.STYLE_PHONE_2D.equals(style);
+        boolean xp = phone || AppPreferences.STYLE_XP_2D.equals(style);
+        // La X, el título de ventana, el menú Archivo, el estado y el álbum no
+        // equivalen a los controles nativos: no ofrecer interruptores sin efecto.
+        com.google.android.material.materialswitch.MaterialSwitch[] unsupported = {
+                binding.showPlayerBackSwitch, binding.showPlayerHeaderLabelSwitch,
+                binding.showPlayerMusicButtonSwitch, binding.showPlayerAlbumSwitch,
+                binding.showPlayerModeTextSwitch
+        };
+        for (com.google.android.material.materialswitch.MaterialSwitch sw : unsupported) {
+            sw.setEnabled(!xp);
+            sw.setAlpha(xp ? .45f : 1f);
+        }
+        // La ventana XP respeta Mostrar portada, pero en modo barras no hay portada.
+        boolean cover = !xp || (phone
+                ? AppPreferences.PHONE_COVER.equals(AppPreferences.getPhoneCard(requireContext()))
+                : AppPreferences.XP_COVER.equals(AppPreferences.getXpDisplay(requireContext())));
+        binding.showPlayerArtworkSwitch.setEnabled(cover);
+        binding.showPlayerArtworkSwitch.setAlpha(cover ? 1f : .45f);
+        // El estilo de la barra y el recorte de portada son fijos en este skin.
+        binding.artworkRow.setEnabled(!xp && AppPreferences.showPlayerArtwork(requireContext()));
+        binding.artworkRow.setAlpha(!xp && AppPreferences.showPlayerArtwork(requireContext()) ? 1f : .45f);
+        binding.progressStyleRow.setEnabled(!xp && AppPreferences.showPlayerProgressLine(requireContext()));
+        binding.progressStyleRow.setAlpha(!xp && AppPreferences.showPlayerProgressLine(requireContext()) ? 1f : .45f);
+        binding.playerVisibilityLabel.setText(xp ? "ELEMENTOS VISIBLES · " + (phone ? "TELÉFONO" : "XP") + " (opciones compatibles)" : "ELEMENTOS VISIBLES");
     }
 
     private void showStylePicker() {
@@ -1210,6 +1264,8 @@ public class SettingsDetailFragment extends Fragment {
         if (AppPreferences.STYLE_GLASS.equals(s)) return "Glass 2D";
         if (AppPreferences.STYLE_MINIMAL.equals(s)) return "Minimal 2D";
         if (AppPreferences.STYLE_SPOTIFY_2D.equals(s)) return "Spotify 2D";
+        if (AppPreferences.STYLE_XP_2D.equals(s)) return "Reproductor XP";
+        if (AppPreferences.STYLE_PHONE_2D.equals(s)) return "Teléfono clásico";
         if (AppPreferences.STYLE_EQUALIZER_2D.equals(s)) return "Ecualizador 2D";
         if (AppPreferences.STYLE_RING.equals(s)) return "Anillo";
         return "Clásico 2D";
@@ -1229,6 +1285,8 @@ public class SettingsDetailFragment extends Fragment {
         if (AppPreferences.STYLE_GLASS.equals(s)) return "Skin 2D translúcida tipo glassmorphism.";
         if (AppPreferences.STYLE_MINIMAL.equals(s)) return "Skin 2D simple, limpia y elegante.";
         if (AppPreferences.STYLE_SPOTIFY_2D.equals(s)) return "Interfaz 2D estilo streaming con carátula dominante.";
+        if (AppPreferences.STYLE_XP_2D.equals(s)) return "Ventana clásica de reproductor, con controles biselados y pantalla negra.";
+        if (AppPreferences.STYLE_PHONE_2D.equals(s)) return "Celular deslizable clásico con pantalla LCD y teclado interactivo.";
         if (AppPreferences.STYLE_EQUALIZER_2D.equals(s)) return "Ecualizador gráfico 2D reactivo al audio, con picos y reflejo.";
         if (AppPreferences.STYLE_RING.equals(s)) return "Portada circular con anillo de espectro reactivo y pulso de graves.";
         return "Skin 2D clásica centrada en la portada.";
@@ -1266,6 +1324,8 @@ public class SettingsDetailFragment extends Fragment {
     @Override public void onResume() { super.onResume(); refreshSummary(); applyListAppearance(); }
     @Override public void onDestroyView() {
         stylePicker.dismiss();
+        xpSkinSettings = null;
+        phoneSkinSettings = null;
         if (playbackOrderSettings != null) {
             playbackOrderSettings.detach();
             playbackOrderSettings = null;

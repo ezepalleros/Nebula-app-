@@ -63,6 +63,74 @@ public final class AppPreferences {
     public static final String STYLE_MINIMAL = "minimal";
     public static final String STYLE_GAMEBOY_3D = "gameboy3d";
     public static final String STYLE_SPOTIFY_2D = "spotify2d";
+    public static final String STYLE_XP_2D = "xp2d";
+    public static final String STYLE_PHONE_2D = "phone2d";
+    // Personalización aislada del skin Teléfono clásico.
+    public static final String KEY_PHONE_THEME = "phone_theme";
+    public static final String KEY_PHONE_TITLE = "phone_title";
+    public static final String KEY_PHONE_APPEARANCE = "phone_appearance";
+    public static final String KEY_PHONE_LCD = "phone_lcd";
+    public static final String KEY_PHONE_CARD = "phone_card";
+    public static final String PHONE_SKY = "sky";
+    public static final String PHONE_GREEN = "green";
+    public static final String PHONE_GRAY = "gray";
+    public static final String PHONE_PIXEL = "pixel";
+    public static final String PHONE_SHARP = "sharp";
+    public static final String PHONE_COVER = "cover";
+    public static final String PHONE_BARS = "bars";
+    public static final String PHONE_DEFAULT_TITLE = "Reproductor";
+
+    public static String getPhoneTheme(Context c) {
+        String value = prefs(c).getString(KEY_PHONE_THEME, PHONE_SKY);
+        return PHONE_GREEN.equals(value) || PHONE_GRAY.equals(value) ? value : PHONE_SKY;
+    }
+    public static String getPhoneTitle(Context c) {
+        String value = prefs(c).getString(KEY_PHONE_TITLE, PHONE_DEFAULT_TITLE);
+        return value == null || value.trim().isEmpty() ? PHONE_DEFAULT_TITLE : value.trim();
+    }
+    public static String getPhoneAppearance(Context c) {
+        return PHONE_SHARP.equals(prefs(c).getString(KEY_PHONE_APPEARANCE, PHONE_PIXEL))
+                ? PHONE_SHARP : PHONE_PIXEL;
+    }
+    public static boolean isPhoneLcdEnabled(Context c) {
+        return prefs(c).getBoolean(KEY_PHONE_LCD, true);
+    }
+    public static String getPhoneCard(Context c) {
+        return PHONE_BARS.equals(prefs(c).getString(KEY_PHONE_CARD, PHONE_COVER))
+                ? PHONE_BARS : PHONE_COVER;
+    }
+    public static final String KEY_XP_THEME = "xp_theme";
+    public static final String KEY_XP_DESKTOP_COLOR = "xp_desktop_color";
+    public static final String KEY_XP_TITLE = "xp_title";
+    public static final String KEY_XP_APPEARANCE = "xp_appearance";
+    public static final String KEY_XP_DISPLAY = "xp_display";
+    public static final String XP_BLUE = "blue";
+    public static final String XP_OLIVE = "olive";
+    public static final String XP_SILVER = "silver";
+    public static final String XP_PIXEL = "pixel";
+    public static final String XP_SHARP = "sharp";
+    public static final String XP_COVER = "cover";
+    public static final String XP_BARS = "bars";
+    public static final String XP_DEFAULT_TITLE = "Reproductor de medios";
+
+    public static String getXpTheme(Context c) {
+        String v = prefs(c).getString(KEY_XP_THEME, XP_BLUE);
+        return XP_OLIVE.equals(v) || XP_SILVER.equals(v) ? v : XP_BLUE;
+    }
+    public static int getXpDesktopColor(Context c) {
+        return prefs(c).getInt(KEY_XP_DESKTOP_COLOR, Color.rgb(56, 109, 164));
+    }
+    public static String getXpTitle(Context c) {
+        String v = prefs(c).getString(KEY_XP_TITLE, XP_DEFAULT_TITLE);
+        return v == null || v.trim().isEmpty() ? XP_DEFAULT_TITLE : v.trim();
+    }
+    public static String getXpAppearance(Context c) {
+        return XP_SHARP.equals(prefs(c).getString(KEY_XP_APPEARANCE, XP_PIXEL)) ? XP_SHARP : XP_PIXEL;
+    }
+    public static String getXpDisplay(Context c) {
+        return XP_BARS.equals(prefs(c).getString(KEY_XP_DISPLAY, XP_COVER)) ? XP_BARS : XP_COVER;
+    }
+
     public static final String STYLE_EQUALIZER_2D = "equalizer2d";
     public static final String STYLE_RING = "ring";
 
@@ -270,6 +338,7 @@ public final class AppPreferences {
                 || STYLE_CASSETTE.equals(style) || STYLE_WALKMAN.equals(style) || STYLE_RETRO.equals(style)
                 || STYLE_NEON.equals(style) || STYLE_GLASS.equals(style) || STYLE_MINIMAL.equals(style)
                 || STYLE_GAMEBOY_3D.equals(style) || STYLE_SPOTIFY_2D.equals(style)
+                || STYLE_XP_2D.equals(style) || STYLE_PHONE_2D.equals(style)
                 || STYLE_EQUALIZER_2D.equals(style) || STYLE_RING.equals(style);
         if (supported) return style;
         prefs(context).edit().putString(KEY_PLAYER_STYLE, STYLE_CLASSIC).commit();
@@ -406,11 +475,13 @@ public final class AppPreferences {
                 || STYLE_CASSETTE.equals(style) || STYLE_WALKMAN.equals(style) || STYLE_RETRO.equals(style)
                 || STYLE_NEON.equals(style) || STYLE_GLASS.equals(style) || STYLE_MINIMAL.equals(style)
                 || STYLE_GAMEBOY_3D.equals(style) || STYLE_SPOTIFY_2D.equals(style)
+                || STYLE_XP_2D.equals(style) || STYLE_PHONE_2D.equals(style)
                 || STYLE_EQUALIZER_2D.equals(style) || STYLE_RING.equals(style);
     }
 
     public static boolean isTwoDimensionalStyle(String style) {
         return STYLE_SPOTIFY_2D.equals(style)
+                || STYLE_XP_2D.equals(style) || STYLE_PHONE_2D.equals(style)
                 || STYLE_EQUALIZER_2D.equals(style)
                 || STYLE_CLASSIC.equals(style)
                 || STYLE_NEON.equals(style)
@@ -419,7 +490,8 @@ public final class AppPreferences {
     }
 
     public static boolean isImmersiveTwoDimensionalStyle(String style) {
-        return STYLE_SPOTIFY_2D.equals(style);
+        return STYLE_SPOTIFY_2D.equals(style) || STYLE_XP_2D.equals(style)
+                || STYLE_PHONE_2D.equals(style);
     }
 
     public static int getPlayerAccentColor(Context context) {

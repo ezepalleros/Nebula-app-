@@ -27,7 +27,7 @@ public final class LyricsViewerSettingsController {
         title.setText("VISUALIZACIÓN");
         title.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleMedium);
         body.addView(title);
-        String[] modes={"Mostrar portada", "Solo frase actual (karaoke)", "Letra completa con resaltado"};
+        String[] modes={"No hacer nada (letras deshabilitadas)", "Solo frase actual (karaoke)", "Letra completa con resaltado"};
         choice(c,body,"Qué mostrar al tocar la portada", "Qué aparece mientras se reproduce.",
                 modes,new String[]{"cover","single","full"},p,"lyrics_view_mode","full");
         choice(c,body,"Ocupar pantalla completa", "Solo letras, lápiz y cerrar; oculta el skin y los controles.",

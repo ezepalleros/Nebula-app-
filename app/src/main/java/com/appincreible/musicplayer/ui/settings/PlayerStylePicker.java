@@ -67,7 +67,17 @@ final class PlayerStylePicker {
         String hex = String.format(Locale.US, "%06X", accent & 0xFFFFFF);
         String current = AppPreferences.getPlayerStyle(context);
         web.loadUrl("file:///android_asset/player3d/picker.html?selected="
-                + Uri.encode(current) + "&accent=" + hex);
+                + Uri.encode(current) + "&accent=" + hex
+                + "&xpTheme=" + Uri.encode(AppPreferences.getXpTheme(context))
+                + "&xpDesktop=" + String.format(Locale.US, "%06X", AppPreferences.getXpDesktopColor(context) & 0xFFFFFF)
+                + "&xpTitle=" + Uri.encode(AppPreferences.getXpTitle(context))
+                + "&xpAspect=" + Uri.encode(AppPreferences.getXpAppearance(context))
+                + "&xpDisplay=" + Uri.encode(AppPreferences.getXpDisplay(context))
+                + "&phoneTheme=" + Uri.encode(AppPreferences.getPhoneTheme(context))
+                + "&phoneTitle=" + Uri.encode(AppPreferences.getPhoneTitle(context))
+                + "&phoneAspect=" + Uri.encode(AppPreferences.getPhoneAppearance(context))
+                + "&phoneLcd=" + AppPreferences.isPhoneLcdEnabled(context)
+                + "&phoneCard=" + Uri.encode(AppPreferences.getPhoneCard(context)));
 
         dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle("Estilo del reproductor")
@@ -99,6 +109,8 @@ final class PlayerStylePicker {
                 || AppPreferences.STYLE_GLASS.equals(skin)
                 || AppPreferences.STYLE_MINIMAL.equals(skin)
                 || AppPreferences.STYLE_SPOTIFY_2D.equals(skin)
+                || AppPreferences.STYLE_XP_2D.equals(skin)
+                || AppPreferences.STYLE_PHONE_2D.equals(skin)
                 || AppPreferences.STYLE_EQUALIZER_2D.equals(skin)
                 || AppPreferences.STYLE_RING.equals(skin);
     }

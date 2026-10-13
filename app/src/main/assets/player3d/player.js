@@ -9,6 +9,10 @@
   let rotY=0.55,rotX=-0.10,scale=1,autoVel=0.004,userVel=0,touching=false,lastX=0,lastT=0,trackKick=0;
   let raf=0,lastRender=0,lastUpdate=performance.now(),lastInteraction=0,pageVisible=!document.hidden;
   let artLoadGeneration=0;
+  const xpPreviewCanvas=document.createElement('canvas');
+  xpPreviewCanvas.width=270; xpPreviewCanvas.height=400;
+  let xpPreviewOptions={xpTheme:'blue',xpDesktopColor:'#386da4',xpTitle:'Reproductor de medios',xpPixelated:true,xpDisplay:'cover'};
+  let phonePreviewOptions={phoneTheme:'sky',phoneTitle:'Reproductor',phonePixelated:true,phoneLcd:true,phoneCard:'cover'};
 
   function colorHex(v){ if(typeof v==='string')return v; const s=(v>>>0).toString(16).padStart(6,'0');return '#'+s.slice(-6); }
   function is2D(){ return !!style&&PlayerModels.is2DStyle(style); }
@@ -18,10 +22,11 @@
     const twoD=is2D();
     glCanvas.style.display=twoD?'none':'block';
     flatCanvas.style.display=twoD?'block':'none';
+    flatCanvas.classList.toggle('phone',style==='phone2d'&&phonePreviewOptions.phonePixelated);
   }
   function resizeFlat(){
-    const dpr=Math.min(window.devicePixelRatio||1,2);
-    const w=Math.max(1,Math.floor(flatCanvas.clientWidth*dpr));
+    const dpr=style==='phone2d'&&phonePreviewOptions.phonePixelated ? 300/Math.max(1,flatCanvas.clientWidth) : Math.min(window.devicePixelRatio||1,2);
+    const w=style==='phone2d'&&phonePreviewOptions.phonePixelated ? 300 : Math.max(1,Math.floor(flatCanvas.clientWidth*dpr));
     const h=Math.max(1,Math.floor(flatCanvas.clientHeight*dpr));
     if(flatCanvas.width!==w||flatCanvas.height!==h){ flatCanvas.width=w; flatCanvas.height=h; }
   }
@@ -88,7 +93,23 @@
     if(is2D()){
       resizeFlat();
       const progress=.34+((Date.now()/1800)%1)*.42;
-      PlayerModels.drawSkin2D(flatCanvas,style,{accent,title,artist,artImage,playing,animation,previewMode,progress,tick:Date.now(),typography});
+      if(style==='xp2d'){
+        // Vista previa completa, no recortar los controles inferiores en tarjetas apaisadas.
+        PlayerModels.drawSkin2D(xpPreviewCanvas,style,{...xpPreviewOptions,title,artist,
+          artImage,playing,hasMedia:true,previewMode:true,animation:0,progress,
+          positionMs:73000,durationMs:215000,tick:0,radio:false,ui:{artwork:true}});
+        const ctx=flatCanvas.getContext('2d');
+        ctx.clearRect(0,0,flatCanvas.width,flatCanvas.height);
+        ctx.imageSmoothingEnabled=!xpPreviewOptions.xpPixelated;
+        const scale=Math.min(flatCanvas.width/270,flatCanvas.height/400);
+        const dw=Math.floor(270*scale),dh=Math.floor(400*scale);
+        ctx.drawImage(xpPreviewCanvas,Math.floor((flatCanvas.width-dw)/2),
+          Math.floor((flatCanvas.height-dh)/2),dw,dh);
+      }else{
+        PlayerModels.drawSkin2D(flatCanvas,style,{accent,title,artist,album:style==='phone2d'?'Tu álbum':'',artImage,playing,animation,previewMode:style==='phone2d'?true:previewMode,progress,tick:Date.now(),typography, ... (style==='phone2d'?phonePreviewOptions:{}),
+          favorite:style==='phone2d',favoriteVisible:style==='phone2d',queueVisible:style==='phone2d',queuePosition:13,queueTotal:13,positionMs:73000,durationMs:215000,
+          ui:style==='phone2d'?{artwork:true,title:true,artist:true,modeText:true,shuffle:true,repeat:true,progress:true}:undefined});
+      }
       return;
     }
     if(!model||!renderer)return;
@@ -99,6 +120,7 @@
   function canRender(){return initialized&&visible&&pageVisible;}
   function needsContinuousFrames(ts){
     if(!canRender())return false;
+    if(style==='xp2d'||style==='phone2d')return false; // Skins de vista previa estática.
     if(touching||ts-lastInteraction<1400)return true;
     if(playing&&animation>0)return true;
     if(trackKick>0.001||Math.abs(userVel)>0.00001)return true;
@@ -132,6 +154,7 @@
   window.addEventListener('resize',()=>{renderNow();schedule();});
   document.addEventListener('visibilitychange',()=>{pageVisible=!document.hidden;if(pageVisible){lastUpdate=performance.now();renderNow();schedule();}else if(raf){cancelAnimationFrame(raf);raf=0;}});
 
+  window.addEventListener('phone-font-ready',()=>{if(style==='phone2d'&&initialized)renderNow();});
   window.Player3D={
     prepare,
     setSkin(s){style=s||'classic';if(initialized)rebuild();},
@@ -145,6 +168,22 @@
     setAppVisible(v){requestedVisible=!!v;visible=requestedVisible;if(visible&&initialized){lastUpdate=performance.now();renderNow();schedule();}else if(raf){cancelAnimationFrame(raf);raf=0;}},
     setRotationY(v){if(initialized&&!is2D()){rotY=Number(v)||0;userVel=0;renderNow();}},
     setPreviewMode(v){previewMode=!!v;renderNow();schedule();},
+    setXpOptions(theme,desktop,windowTitle,pixelated,display){
+      xpPreviewOptions={
+        xpTheme:theme==='olive'||theme==='silver'?theme:'blue',
+        xpDesktopColor:typeof desktop==='string'&&/^#[0-9a-fA-F]{6}$/.test(desktop)?desktop:'#386da4',
+        xpTitle:typeof windowTitle==='string'&&windowTitle.trim()?windowTitle.trim():'Reproductor de medios',
+        xpPixelated:pixelated!==false,
+        xpDisplay:display==='bars'?'bars':'cover'
+      };
+      if(style==='xp2d')renderNow();
+    },
+    setPhoneOptions(theme,screenTitle,pixelated,lcd,card){
+      phonePreviewOptions={phoneTheme:theme==='green'||theme==='gray'?theme:'sky',
+        phoneTitle:typeof screenTitle==='string'&&screenTitle.trim()?screenTitle.trim():'Reproductor',
+        phonePixelated:pixelated!==false,phoneLcd:lcd!==false,phoneCard:card==='bars'?'bars':'cover'};
+      if(style==='phone2d'){syncCanvasVisibility();renderNow();}
+    },
     debugState(){return {style,rotY,rotX,playing,touching,userVel,autoVel,visible,previewMode,is2D:is2D(),initialized};},
     dispose(){requestedVisible=false;visible=false;initialized=false;artLoadGeneration++;if(raf)cancelAnimationFrame(raf);raf=0;if(model){model.dispose();model=null;}if(renderer){renderer.dispose();renderer=null;}labelTexture=null;artImage=null;}
   };

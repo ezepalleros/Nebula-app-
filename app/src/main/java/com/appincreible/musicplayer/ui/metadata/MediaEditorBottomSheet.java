@@ -39,6 +39,7 @@ import com.appincreible.musicplayer.database.MediaOverrideEntity;
 import com.appincreible.musicplayer.databinding.DialogMediaEditorBinding;
 import com.appincreible.musicplayer.metadata.model.ArtworkOption;
 import com.appincreible.musicplayer.metadata.repository.ArtworkSearchRepository;
+import com.appincreible.musicplayer.metadata.repository.ArtworkDownloadRepository;
 import com.appincreible.musicplayer.metadata.repository.MediaMetadataRepository;
 import com.appincreible.musicplayer.power.PowerSaverManager;
 import com.appincreible.musicplayer.themes.AppPreferences;
@@ -72,6 +73,8 @@ public class MediaEditorBottomSheet extends BottomSheetDialogFragment {
     private DialogMediaEditorBinding binding;
     private MediaMetadataRepository metadataRepository;
     private ArtworkSearchRepository artworkSearchRepository;
+    private ArtworkDownloadRepository artworkDownloadRepository;
+    private ArtworkResultsSheet artworkResultsSheet;
     private String selectedArtwork = "";
     private String initialTitle = "";
     private String initialArtist = "";
@@ -177,6 +180,7 @@ public class MediaEditorBottomSheet extends BottomSheetDialogFragment {
         super.onViewCreated(view, savedInstanceState);
         metadataRepository = new MediaMetadataRepository(requireContext());
         artworkSearchRepository = new ArtworkSearchRepository(requireContext());
+        artworkDownloadRepository = new ArtworkDownloadRepository(requireContext());
 
         Bundle args = requireArguments();
         String mediaKey = value(args, ARG_MEDIA_KEY);
@@ -285,6 +289,10 @@ public class MediaEditorBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void searchArtwork(boolean radio) {
+        if (!radio) {
+            searchSongCovers();
+            return;
+        }
         String title = text(binding.titleInput);
         String artist = text(binding.artistInput);
         if (title.isEmpty()) {
@@ -315,6 +323,52 @@ public class MediaEditorBottomSheet extends BottomSheetDialogFragment {
 
         if (radio) artworkSearchRepository.searchRadio(title, callback);
         else artworkSearchRepository.searchSong(title, artist, callback);
+    }
+
+    /** Song covers use a separate chooser; radio-logo search keeps its existing UI. */
+    private void searchSongCovers() {
+        if (binding == null) return;
+        String title = text(binding.titleInput);
+        if (title.isEmpty()) {
+            binding.titleInput.setError("Escribí un título primero");
+            return;
+        }
+        if (artworkResultsSheet != null) artworkResultsSheet.dismiss();
+        artworkSearchRepository.cancel();
+        artworkResultsSheet = new ArtworkResultsSheet(requireContext(), new ArtworkResultsSheet.Actions() {
+            @Override public void select(ArtworkOption option) {
+                final ArtworkResultsSheet sheet = artworkResultsSheet;
+                if (sheet == null) return;
+                sheet.showDownloading();
+                artworkDownloadRepository.download(option, (uri, error) -> {
+                    if (binding == null || artworkResultsSheet != sheet || !sheet.isShowing()) return;
+                    if (error != null) {
+                        sheet.showDownloadError(error);
+                        return;
+                    }
+                    selectedArtwork = uri;
+                    userEdited = true;
+                    renderPreview();
+                    sheet.dismiss();
+                    Toast.makeText(requireContext(), "Portada lista; tocá Guardar para aplicarla", Toast.LENGTH_SHORT).show();
+                });
+            }
+            @Override public void pickFile() { imagePicker.launch(new String[]{"image/*"}); }
+        }, () -> {
+            artworkSearchRepository.cancel();
+            artworkDownloadRepository.cancelActive();
+        });
+        final ArtworkResultsSheet sheet = artworkResultsSheet;
+        sheet.show();
+        artworkSearchRepository.searchSong(title, text(binding.artistInput), text(binding.albumInput),
+                new ArtworkSearchRepository.CallbackResult() {
+                    @Override public void onLoaded(List<ArtworkOption> options) {
+                        if (binding != null && artworkResultsSheet == sheet) sheet.setResults(options);
+                    }
+                    @Override public void onError(String message) {
+                        if (binding != null && artworkResultsSheet == sheet) sheet.setError(message);
+                    }
+                });
     }
 
     private void showArtworkOptions(List<ArtworkOption> options) {
@@ -468,6 +522,9 @@ public class MediaEditorBottomSheet extends BottomSheetDialogFragment {
 
     @Override
     public void onDestroyView() {
+        if (artworkResultsSheet != null) { artworkResultsSheet.dismiss(); artworkResultsSheet = null; }
+        if (artworkSearchRepository != null) artworkSearchRepository.close();
+        if (artworkDownloadRepository != null) artworkDownloadRepository.close();
         if (metadataRepository != null) metadataRepository.close();
         binding = null;
         super.onDestroyView();

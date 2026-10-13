@@ -125,6 +125,7 @@ public class NowPlayingFragment extends Fragment {
     private QueueBottomSheet.QueueAdapter inlineQueueAdapter;
     private boolean queueExpanded;
     private int statusBarInsetTop;
+    private int statusBarInsetBottom;
     private float artworkSwipeDownX;
     private float artworkSwipeDownY;
     private boolean artworkSwipeCandidate;
@@ -174,6 +175,8 @@ public class NowPlayingFragment extends Fragment {
 
         lyricsUi = new LyricsEditorUi(requireContext(), new LyricsEditorUi.Playback() {
             @Override public long position() { return positionMs; }
+            @Override public long duration() { return durationMs; }
+            @Override public void seekTo(long position) { viewModel.seekTo(position); }
             @Override public void pauseToggle() { viewModel.togglePlayPause(); }
             @Override public void rewindThreeSeconds() { viewModel.seekTo(Math.max(0L, positionMs - 3000L)); }
         });
@@ -181,6 +184,12 @@ public class NowPlayingFragment extends Fragment {
         lyricsUi.setSeekBoundary(binding.seekBar);
         lyricsUi.setVisibilityListener(visible -> {
             if (binding == null) return;
+            // El LCD del Teléfono clásico no debe dibujar la tarjeta y los
+            // botones detrás del visor de Letras, incluso con fondo transparente.
+            if (AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) {
+                eval2d("Player2D.setPhoneLyricsVisible(" + visible + ")");
+                updateEqualizerAnalysisState();
+            }
             if (visible) {
                 push2dVisibility();
                 enforceLyricsArtworkVisibility();
@@ -266,6 +275,8 @@ public class NowPlayingFragment extends Fragment {
         viewModel.getAlbum().observe(getViewLifecycleOwner(), value -> {
             binding.album.setText(value == null ? "" : value);
             applyMetadataVisibility();
+            if (AppPreferences.STYLE_PHONE_2D.equals(activeStyle))
+                eval2d("Player2D.setPhoneAlbum(" + JSONObject.quote(value(value)) + ")");
         });
         viewModel.getArtworkUri().observe(getViewLifecycleOwner(), this::loadArtworkForRenderers);
         viewModel.getHasMedia().observe(getViewLifecycleOwner(), available -> {
@@ -283,6 +294,7 @@ public class NowPlayingFragment extends Fragment {
                 // setPlaying()/setPlaybackModes() update the canvas in place without flashing.
                 ensureRendererForCurrentState();
             }
+            updateEqualizerAnalysisState();
         });
         viewModel.getPlaying().observe(getViewLifecycleOwner(), isPlaying -> {
             playing = Boolean.TRUE.equals(isPlaying);
@@ -298,6 +310,7 @@ public class NowPlayingFragment extends Fragment {
         });
         viewModel.getRadioMedia().observe(getViewLifecycleOwner(), isRadio -> {
             radioMedia = Boolean.TRUE.equals(isRadio);
+            updateEqualizerAnalysisState();
             syncCurrentSong();
             applyPlayerElementVisibility(AppPreferences.STYLE_RING.equals(activeStyle));
             updateRadioStatusUi();
@@ -305,12 +318,14 @@ public class NowPlayingFragment extends Fragment {
         viewModel.getRadioConnectionState().observe(getViewLifecycleOwner(), state -> {
             radioConnectionState = state == null ? PlayerController.RADIO_CONNECTION_IDLE : state;
             updateRadioStatusUi();
+            pushSpotify2dState();
         });
         viewModel.getRepeatMode().observe(getViewLifecycleOwner(), mode -> {
             repeatMode = mode == null ? Player.REPEAT_MODE_OFF : mode;
             renderPlaybackModes();
         });
         viewModel.getQueue().observe(getViewLifecycleOwner(), items -> {
+            pushPhoneQueue(items);
             if (inlineQueueAdapter == null) return;
             inlineQueueAdapter.submit(items == null ? java.util.Collections.emptyList() : items);
             binding.inlineQueueEmpty.setVisibility(items == null || items.isEmpty() ? View.VISIBLE : View.GONE);
@@ -510,6 +525,10 @@ public class NowPlayingFragment extends Fragment {
         web.setAlpha(0f);
         web.setVisibility(View.INVISIBLE);
         web.addJavascriptInterface(new RendererBridge(generation), "AndroidRenderer");
+        if (AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                || AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) {
+            web.addJavascriptInterface(new XpSpectrumBridge(), "AndroidSpectrum");
+        }
         updateEqualizerAnalysisState();
         web.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView view, String url) {
@@ -541,6 +560,10 @@ public class NowPlayingFragment extends Fragment {
 
     @SuppressLint("SetJavaScriptEnabled")
     private boolean handleArtworkSwipe(View view, MotionEvent event) {
+        // XP dispone de una barra de seek arrastrable dentro del canvas.
+        // No interpretar sus movimientos horizontales como cambios de canción.
+        if (AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                || AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) return false;
         if (binding == null || viewModel == null || !hasMedia || radioMedia) {
             artworkSwipeCandidate = false;
             return false;
@@ -768,6 +791,29 @@ public class NowPlayingFragment extends Fragment {
         }
     }
 
+    private final class XpSpectrumBridge {
+        @JavascriptInterface public String getBands() {
+            if (!isResumed() || !playing || !hasMedia ||
+                    !(AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                      || AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) ||
+                    !(AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                      ? AppPreferences.XP_BARS.equals(AppPreferences.getXpDisplay(requireContext()))
+                      : AppPreferences.PHONE_BARS.equals(AppPreferences.getPhoneCard(requireContext()))) ||
+                    (AppPreferences.STYLE_PHONE_2D.equals(activeStyle)
+                      && lyricsUi != null && lyricsUi.isVisible()) ||
+                    PowerSaverManager.isActive(requireContext())) return "";
+            float[] values = new float[EqualizerSpectrum.BAND_COUNT];
+            EqualizerSpectrum.snapshot(values);
+            StringBuilder out = new StringBuilder(120);
+            for (int i = 0; i < 24; i++) {
+                if (i > 0) out.append(',');
+                out.append(Math.round(Math.min(1f, Math.max(0f,
+                        (values[i * 2] + values[i * 2 + 1]) * .5f)) * 1000f));
+            }
+            return out.toString();
+        }
+    }
+
     private void updateEqualizerAnalysisState() {
         if (binding == null) return;
         boolean equalizerSkin = AppPreferences.STYLE_EQUALIZER_2D.equals(activeStyle);
@@ -785,6 +831,15 @@ public class NowPlayingFragment extends Fragment {
         enforceLyricsArtworkVisibility();
         // spectrum source, so only override it while Ring is the active visualizer.
         if (ringSkin) EqualizerSpectrum.setAnalysisEnabled(binding.ringVisualizer.shouldAnalyze());
+        else if (AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                || AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) {
+            boolean bars = AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                    ? AppPreferences.XP_BARS.equals(AppPreferences.getXpDisplay(requireContext()))
+                    : AppPreferences.PHONE_BARS.equals(AppPreferences.getPhoneCard(requireContext()));
+            EqualizerSpectrum.setAnalysisEnabled(isResumed() && playing && hasMedia
+                    && !PowerSaverManager.isActive(requireContext()) && bars
+                    && (lyricsUi == null || !lyricsUi.isVisible()));
+        }
     }
 
     private void revealRenderer() {
@@ -873,6 +928,7 @@ public class NowPlayingFragment extends Fragment {
             push2dVisibility();
             pushSpotify2dState();
             pushNeon2dState();
+            pushXp2dOptions();
             rendererWeb.evaluateJavascript("Player2D.setProgress(" + positionMs + "," + durationMs + ")", null);
             rendererWeb.evaluateJavascript("Player2D.prepare("
                     + JSONObject.quote(style) + "," + JSONObject.quote(hex) + "," + animation + ","
@@ -933,6 +989,12 @@ public class NowPlayingFragment extends Fragment {
         String command = uri.getQueryParameter("cmd");
         if (command == null) return true;
         switch (command) {
+            case "back": navigateBackToSource(); break;
+            case "options": openPlayerOptions(); break;
+            case "stop":
+                viewModel.pause();
+                if (!radioMedia && durationMs > 0) viewModel.seekTo(0L);
+                break;
             case "playpause": viewModel.togglePlayPause(); break;
             case "previous": viewModel.previous(); break;
             case "next": viewModel.next(); break;
@@ -972,6 +1034,14 @@ public class NowPlayingFragment extends Fragment {
             lyricsUi.hide();
             return;
         }
+        // La opcion "No hacer nada" conserva el valor "cover" por compatibilidad
+        // con preferencias ya guardadas. No abrir el visor desde ninguna skin.
+        if ("cover".equals(AppPreferences.prefs(requireContext())
+                .getString("lyrics_view_mode", "full"))) return;
+        boolean xpSkin = immersive2d && AppPreferences.STYLE_XP_2D.equals(activeStyle);
+        boolean phoneSkin = immersive2d && AppPreferences.STYLE_PHONE_2D.equals(activeStyle);
+        // Pantalla completa también está disponible en XP y Teléfono clásico.
+        // Los límites propios de cada skin sólo aplican cuando esta opción está desactivada.
         boolean lyricsFullscreen = AppPreferences.prefs(requireContext())
                 .getInt("lyrics_view_fullscreen", 0) == 1;
         lyricsUi.setFullscreenHost(lyricsFullscreen);
@@ -979,7 +1049,9 @@ public class NowPlayingFragment extends Fragment {
         // límites propios para que el visor normal no cubra sus controles.
         lyricsUi.setHost(lyricsFullscreen || immersive2d
                 ? binding.getRoot() : binding.artworkStage);
-        lyricsUi.setImmersiveLimitedHost(!lyricsFullscreen && immersive2d);
+        lyricsUi.setImmersiveLimitedHost(!lyricsFullscreen && immersive2d && !xpSkin && !phoneSkin);
+        lyricsUi.setXpScreenHost(xpSkin, statusBarInsetTop, statusBarInsetBottom);
+        lyricsUi.setPhoneScreenHost(phoneSkin, statusBarInsetTop, statusBarInsetBottom);
         lyricsUi.show();
         // La barra se ubica después del layout; no permitir que el visor
         // transparente intercepte sus toques al abrir Letras.
@@ -1010,9 +1082,21 @@ public class NowPlayingFragment extends Fragment {
         enforceLyricsArtworkVisibility();
     }
 
+    private void pushPhoneQueue(java.util.List<PlayerController.QueueEntry> items) {
+        if (!AppPreferences.STYLE_PHONE_2D.equals(activeStyle) || items == null) return;
+        int current = 0, total = 0;
+        for (PlayerController.QueueEntry entry : items) {
+            total = Math.max(total, entry.mediaItemIndex + 1);
+            if (entry.current) current = entry.mediaItemIndex + 1;
+        }
+        eval2d("Player2D.setPhoneQueue(" + current + "," + total + ")");
+    }
+
     private void pushSpotify2dState() {
         if (binding == null || !rendererTwoDimensional
-                || !AppPreferences.STYLE_SPOTIFY_2D.equals(activeStyle)) return;
+                || !(AppPreferences.STYLE_SPOTIFY_2D.equals(activeStyle)
+                  || AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                  || AppPreferences.STYLE_PHONE_2D.equals(activeStyle))) return;
         boolean favoriteVisible = !radioMedia && currentSong != null;
         boolean favorite = favoriteVisible && musicViewModel != null
                 && musicViewModel.isFavorite(currentSong.getId());
@@ -1023,6 +1107,59 @@ public class NowPlayingFragment extends Fragment {
         eval2d("Player2D.setFavorite(" + favorite + "," + favoriteVisible + ")");
         eval2d("Player2D.setQueueVisible(" + queueVisible + ")");
         eval2d("Player2D.setBackgroundColor(" + JSONObject.quote(backgroundHex) + ")");
+        if (AppPreferences.STYLE_XP_2D.equals(activeStyle)) {
+            pushXp2dOptions();
+            eval2d("Player2D.setXpRadio(" + radioMedia + "," + radioConnectionState
+                    + "," + hasMedia + ")");
+            pushXp2dInsets();
+        } else if (AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) {
+            pushPhone2dOptions();
+            // Recuperar el estado si el WebView se prepara mientras Letras está abierta.
+            eval2d("Player2D.setPhoneLyricsVisible(" + (lyricsUi != null && lyricsUi.isVisible()) + ")");
+            eval2d("Player2D.setPhoneRadio(" + radioMedia + "," + radioConnectionState
+                    + "," + hasMedia + ")");
+            eval2d("Player2D.setPhoneAlbum(" + JSONObject.quote(binding.album.getText().toString()) + ")");
+            pushPhoneQueue(viewModel.getQueue().getValue());
+            pushPhone2dInsets();
+        }
+    }
+
+    private void pushXp2dOptions() {
+        if (!rendererReady || rendererWeb == null || !rendererTwoDimensional
+                || !AppPreferences.STYLE_XP_2D.equals(activeStyle)) return;
+        String desktop = String.format(Locale.US, "#%06X", AppPreferences.getXpDesktopColor(requireContext()) & 0xFFFFFF);
+        eval2d("Player2D.setXpOptions(" + JSONObject.quote(AppPreferences.getXpTheme(requireContext()))
+                + "," + JSONObject.quote(desktop)
+                + "," + JSONObject.quote(AppPreferences.getXpTitle(requireContext()))
+                + "," + AppPreferences.XP_PIXEL.equals(AppPreferences.getXpAppearance(requireContext()))
+                + "," + JSONObject.quote(AppPreferences.getXpDisplay(requireContext())) + ")");
+    }
+
+    private void pushXp2dInsets() {
+        if (binding == null || !rendererReady || rendererWeb == null || !rendererTwoDimensional
+                || !AppPreferences.STYLE_XP_2D.equals(activeStyle)) return;
+        float density = Math.max(1f, getResources().getDisplayMetrics().density);
+        eval2d("Player2D.setXpSystemInsets(" + (statusBarInsetTop / density)
+                + "," + (statusBarInsetBottom / density) + ")");
+    }
+
+    private void pushPhone2dOptions() {
+        if (!rendererReady || rendererWeb == null || !rendererTwoDimensional
+                || !AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) return;
+        eval2d("Player2D.setPhoneOptions(" + JSONObject.quote(AppPreferences.getPhoneTheme(requireContext()))
+                + "," + JSONObject.quote(AppPreferences.getPhoneTitle(requireContext()))
+                + "," + AppPreferences.PHONE_PIXEL.equals(AppPreferences.getPhoneAppearance(requireContext()))
+                + "," + AppPreferences.isPhoneLcdEnabled(requireContext())
+                + "," + JSONObject.quote(AppPreferences.getPhoneCard(requireContext()))
+                + "," + PowerSaverManager.isActive(requireContext()) + ")");
+    }
+
+    private void pushPhone2dInsets() {
+        if (binding == null || !rendererReady || rendererWeb == null || !rendererTwoDimensional
+                || !AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) return;
+        float density = Math.max(1f, getResources().getDisplayMetrics().density);
+        eval2d("Player2D.setPhoneSystemInsets(" + (statusBarInsetTop / density)
+                + "," + (statusBarInsetBottom / density) + ")");
     }
 
     private int rendererAccentColor() {
@@ -1073,7 +1210,9 @@ public class NowPlayingFragment extends Fragment {
     private void push2dProgress() {
         // Non-immersive 2D skins use the native seek bar, so crossing the WebView bridge
         // twice per second only wakes the renderer without changing anything on screen.
-        if (!AppPreferences.STYLE_SPOTIFY_2D.equals(activeStyle)) return;
+        if (!AppPreferences.STYLE_SPOTIFY_2D.equals(activeStyle)
+                && !AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                && !AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) return;
         eval2d("Player2D.setProgress(" + positionMs + "," + durationMs + ")");
     }
 
@@ -1359,9 +1498,20 @@ public class NowPlayingFragment extends Fragment {
         ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (view, insets) -> {
             Insets bars = insets.getInsets(
                     WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.displayCutout());
-            if (statusBarInsetTop != bars.top) {
+            int bottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            if (statusBarInsetTop != bars.top || statusBarInsetBottom != bottom) {
                 statusBarInsetTop = bars.top;
+                statusBarInsetBottom = bottom;
                 applyPlayerTopInsets(binding.playerHeader.getVisibility() == View.VISIBLE);
+                pushXp2dInsets();
+                pushPhone2dInsets();
+                if (lyricsUi != null && lyricsUi.isVisible()
+                        && AppPreferences.STYLE_XP_2D.equals(activeStyle)) {
+                    lyricsUi.setXpScreenHost(true, statusBarInsetTop, statusBarInsetBottom);
+                }
+                if (lyricsUi != null && AppPreferences.STYLE_PHONE_2D.equals(activeStyle)) {
+                    lyricsUi.setPhoneScreenHost(true, statusBarInsetTop, statusBarInsetBottom);
+                }
             }
             return insets;
         });
@@ -1596,7 +1746,9 @@ public class NowPlayingFragment extends Fragment {
         boolean showMusic = AppPreferences.showPlayerMusicButton(requireContext());
         boolean showQueue = AppPreferences.showPlayerQueue(requireContext()) && !radioMedia;
         boolean showMore = showMusic;
-        boolean anyHeader = showBack || showHeader || showMore;
+        boolean xpImmersive = immersive2d && (AppPreferences.STYLE_XP_2D.equals(activeStyle)
+                || AppPreferences.STYLE_PHONE_2D.equals(activeStyle));
+        boolean anyHeader = !xpImmersive && (showBack || showHeader || showMore);
 
         binding.backButton.setVisibility(showBack ? View.VISIBLE : View.GONE);
         binding.headerLabel.setVisibility(showHeader ? View.VISIBLE : View.GONE);
@@ -1836,6 +1988,7 @@ public class NowPlayingFragment extends Fragment {
         if (viewModel != null && PowerSaverManager.isActive(requireContext())) viewModel.startUiUpdates();
         if (binding != null) {
             applyPlayerAppearance();
+            pushPhone2dOptions();
             updateEqualizerAnalysisState();
             AppTypography.applyToViewTree(binding.getRoot());
             if (rendererWeb != null && !PowerSaverManager.isActive(requireContext())) {
@@ -1884,6 +2037,7 @@ public class NowPlayingFragment extends Fragment {
 
     private void destroyWebView(WebView webView) {
         try { webView.removeJavascriptInterface("AndroidRenderer"); } catch (Throwable ignored) { }
+        try { webView.removeJavascriptInterface("AndroidSpectrum"); } catch (Throwable ignored) { }
         webView.loadUrl("about:blank");
         webView.stopLoading();
         webView.destroy();

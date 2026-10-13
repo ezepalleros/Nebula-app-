@@ -164,11 +164,18 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
         }, ContextCompat.getMainExecutor(appContext));
     }
 
+    /**
+     * Starts a local-song queue honoring the saved repeat and shuffle preferences.
+     * With REPEAT_MODE_ALL, Media3 wraps at the end of the queue (also in shuffle).
+     * With repeat disabled, reaching the end stops playback as requested.
+     * Radio playback is unaffected.
+     */
     public void playQueue(List<MediaItem> items, int startIndex) {
         if (items == null || items.isEmpty()) return;
         cancelRadioConnectionState();
         runWhenReady(() -> {
             controller.setMediaItems(items, startIndex, 0L);
+            // Honor the user's last choice instead of forcing repeat on every selection.
             applySavedModes(false);
             controller.prepare();
             controller.play();
