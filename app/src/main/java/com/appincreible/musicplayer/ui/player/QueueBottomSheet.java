@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -100,6 +101,13 @@ public final class QueueBottomSheet extends BottomSheetDialogFragment {
         title.setPadding(dim(R.dimen.space_4), 0, dim(R.dimen.space_4), dim(R.dimen.space_12));
         root.addView(title);
 
+        TextView dragHint = new TextView(context);
+        dragHint.setText("Mantené presionado ≡ para mover canciones. Desactivá Aleatorio para cambiar el orden manualmente.");
+        dragHint.setTextAppearance(R.style.TextAppearance_AppIncreible_Caption);
+        dragHint.setTextColor(ColorUtils.setAlphaComponent(text, 190));
+        dragHint.setPadding(dim(R.dimen.space_4), 0, dim(R.dimen.space_4), dim(R.dimen.space_12));
+        root.addView(dragHint);
+
         emptyView = new TextView(context);
         emptyView.setText("No hay canciones en la cola.");
         emptyView.setTextAppearance(R.style.TextAppearance_AppIncreible_Body);
@@ -115,6 +123,8 @@ public final class QueueBottomSheet extends BottomSheetDialogFragment {
         adapter = new QueueAdapter(this::openRemoveMenu, entry -> viewModel.jumpToQueueItem(entry.mediaItemIndex));
         adapter.setExpanded(true);
         list.setAdapter(adapter);
+        viewModel = new ViewModelProvider(requireActivity()).get(PlayerViewModel.class);
+        attachReordering(list, adapter, viewModel);
         LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
         list.setLayoutParams(listParams);
@@ -135,6 +145,56 @@ public final class QueueBottomSheet extends BottomSheetDialogFragment {
             List<PlayerController.QueueEntry> safe = items == null ? new ArrayList<>() : items;
             adapter.submit(safe);
             emptyView.setVisibility(safe.isEmpty() ? View.VISIBLE : View.GONE);
+        });
+        viewModel.getShuffleEnabled().observe(getViewLifecycleOwner(), enabled ->
+                adapter.setReorderEnabled(!Boolean.TRUE.equals(enabled)));
+    }
+
+    /** Reuses the same drag-to-reorder behavior in the full sheet and the inline list. */
+    static void attachReordering(@NonNull RecyclerView list,
+                                 @NonNull QueueAdapter adapter,
+                                 @NonNull PlayerViewModel viewModel) {
+        ItemTouchHelper helper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            private int sourceMediaIndex = -1;
+
+            @Override public boolean isLongPressDragEnabled() { return false; }
+
+            @Override public boolean onMove(@NonNull RecyclerView recyclerView,
+                                            @NonNull RecyclerView.ViewHolder source,
+                                            @NonNull RecyclerView.ViewHolder target) {
+                // A shuffled view is a permutation, not a contiguous timeline. Moving
+                // two arbitrary timeline indices would silently reorder another song.
+                if (!adapter.isExpanded() || !adapter.isReorderEnabled()
+                        || Boolean.TRUE.equals(viewModel.getShuffleEnabled().getValue())) return false;
+                int fromPosition = source.getBindingAdapterPosition();
+                int toPosition = target.getBindingAdapterPosition();
+                PlayerController.QueueEntry sourceEntry = adapter.entryAt(fromPosition);
+                if (sourceEntry == null || adapter.entryAt(toPosition) == null) return false;
+                if (sourceMediaIndex < 0) sourceMediaIndex = sourceEntry.mediaItemIndex;
+                return adapter.moveDisplayedItem(fromPosition, toPosition);
+            }
+
+            @Override public void onSwiped(@NonNull RecyclerView.ViewHolder holder, int direction) { }
+
+            @Override public void clearView(@NonNull RecyclerView recyclerView,
+                                            @NonNull RecyclerView.ViewHolder holder) {
+                super.clearView(recyclerView, holder);
+                int originalIndex = sourceMediaIndex;
+                sourceMediaIndex = -1;
+                if (originalIndex < 0) return;
+                int destination = adapter.positionOfMediaIndex(originalIndex);
+                if (destination >= 0 && destination != originalIndex) {
+                    viewModel.moveQueueItem(originalIndex, destination);
+                }
+            }
+        });
+        helper.attachToRecyclerView(list);
+        adapter.setDragStarter(holder -> {
+            if (adapter.isReorderEnabled()
+                    && !Boolean.TRUE.equals(viewModel.getShuffleEnabled().getValue())) {
+                helper.startDrag(holder);
+            }
         });
     }
 
@@ -221,16 +281,51 @@ public final class QueueBottomSheet extends BottomSheetDialogFragment {
     static final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.Holder> {
         interface RemoveListener { void onRemove(PlayerController.QueueEntry entry); }
         interface ClickListener { void onClick(PlayerController.QueueEntry entry); }
+        interface DragStarter { void start(RecyclerView.ViewHolder holder); }
 
         private final List<PlayerController.QueueEntry> all = new ArrayList<>();
         private final RemoveListener removeListener;
         private final ClickListener clickListener;
+        private DragStarter dragStarter;
         private int visibleCount;
         private boolean expanded;
+        private boolean reorderEnabled = true;
 
         QueueAdapter(RemoveListener removeListener, ClickListener clickListener) {
             this.removeListener = removeListener;
             this.clickListener = clickListener;
+        }
+
+        void setDragStarter(DragStarter starter) { dragStarter = starter; }
+
+        boolean isExpanded() { return expanded; }
+        boolean isReorderEnabled() { return reorderEnabled; }
+
+        void setReorderEnabled(boolean enabled) {
+            if (reorderEnabled == enabled) return;
+            reorderEnabled = enabled;
+            notifyDataSetChanged();
+        }
+
+        @Nullable PlayerController.QueueEntry entryAt(int position) {
+            if (position < 0 || position >= getItemCount()) return null;
+            return displayedEntry(position);
+        }
+
+        int positionOfMediaIndex(int mediaIndex) {
+            for (int i = 0; i < all.size(); i++) {
+                if (all.get(i).mediaItemIndex == mediaIndex) return i;
+            }
+            return -1;
+        }
+
+        boolean moveDisplayedItem(int from, int to) {
+            if (!expanded || from < 0 || to < 0 || from >= visibleCount || to >= visibleCount
+                    || from == to) return false;
+            PlayerController.QueueEntry moved = all.remove(from);
+            all.add(to, moved);
+            notifyItemMoved(from, to);
+            return true;
         }
 
         void submit(List<PlayerController.QueueEntry> items) {
@@ -288,7 +383,13 @@ public final class QueueBottomSheet extends BottomSheetDialogFragment {
                 super(row.getRoot());
                 this.row = row;
                 row.selectionCheck.setVisibility(View.GONE);
-                row.dragHandle.setVisibility(View.GONE);
+                row.dragHandle.setOnLongClickListener(v -> {
+                    if (expanded && reorderEnabled && dragStarter != null) {
+                        dragStarter.start(this);
+                        return true;
+                    }
+                    return false;
+                });
             }
 
             void bind(PlayerController.QueueEntry entry, boolean expanded, int displayPosition) {
@@ -311,6 +412,8 @@ public final class QueueBottomSheet extends BottomSheetDialogFragment {
                 artworkParams.height = artworkSize;
                 row.artwork.setLayoutParams(artworkParams);
                 row.moreButton.setVisibility(expanded ? View.VISIBLE : View.GONE);
+                row.dragHandle.setVisibility(expanded && reorderEnabled && dragStarter != null
+                        ? View.VISIBLE : View.GONE);
                 row.getRoot().setTranslationY(!expanded && displayPosition > 0
                         ? -context.getResources().getDimensionPixelSize(R.dimen.space_8) : 0f);
                 float previewAlpha = context.getResources().getFraction(

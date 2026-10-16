@@ -168,14 +168,15 @@ public class RadioFragment extends Fragment {
     }
 
     private void applyAdaptiveRadioSurface() {
-        UiPalette palette = UiPalette.fallback(requireContext());
         int requestedAccent = AppPreferences.getPlayerAccentColor(requireContext());
-        int background = resolveRadioBackgroundColor(palette.surface, requestedAccent);
+        // Igual que Música: calcular el contraste sobre el color realmente renderizado,
+        // no sobre el tono sin oscurecer guardado en las preferencias.
+        int background = ListAppearance.resolveRenderedBackground(requireContext());
         boolean lightBackground = ColorUtils.calculateLuminance(background) > 0.55d;
 
         int backgroundText = UiPalette.readableTextColor(background);
         int backgroundSecondary = ColorUtils.setAlphaComponent(backgroundText, 184);
-        int accent = ColorUtils.calculateContrast(requestedAccent, background) >= 3.0d
+        int accent = ColorUtils.calculateContrast(requestedAccent, background) >= UiPalette.MIN_TEXT_CONTRAST
                 ? requestedAccent : backgroundText;
 
         int surfaceBase = lightBackground ? Color.WHITE : Color.rgb(12, 14, 20);

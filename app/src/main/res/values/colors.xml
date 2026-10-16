@@ -48,12 +48,14 @@
     <color name="ui_scrim_light_24">#3DFFFFFF</color>
     <color name="ui_disabled_content">#61000000</color>
     <!-- Settings category accents: decorative only; text keeps semantic contrast colors. -->
-    <color name="settings_category_appearance">#A970FF</color>
-    <color name="settings_category_navigation">#5B8CFF</color>
-    <color name="settings_category_player">#FF5FA2</color>
-    <color name="settings_category_audio">#26C6B8</color>
-    <color name="settings_category_radio">#FFB547</color>
-    <color name="settings_category_library">#7EC8FF</color>
-    <color name="settings_category_battery">#69D47C</color>
+    <color name="settings_category_appearance">#FF4855</color>
+    <color name="settings_category_navigation">#FF982E</color>
+    <color name="settings_category_player">#FFE04B</color>
+    <color name="settings_category_lyrics">#48D972</color>
+    <color name="settings_category_audio">#4386FF</color>
+    <color name="settings_category_radio">#A86AFF</color>
+    <color name="settings_category_library">#FF60B0</color>
+    <color name="settings_category_battery">#50D6F3</color>
+    <color name="settings_category_information">#FFFFFF</color>
 
 </resources>

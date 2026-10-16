@@ -178,7 +178,7 @@ public class SettingsFragment extends Fragment implements ListAppearance.Listene
         switch (category) {
             case CATEGORY_NAVIGATION: return R.color.settings_category_navigation;
             case CATEGORY_PLAYER: return R.color.settings_category_player;
-            case CATEGORY_LYRICS: return R.color.settings_category_player;
+            case CATEGORY_LYRICS: return R.color.settings_category_lyrics;
             case CATEGORY_AUDIO: return R.color.settings_category_audio;
             case CATEGORY_RADIO: return R.color.settings_category_radio;
             case CATEGORY_LIBRARY: return R.color.settings_category_library;
@@ -221,7 +221,6 @@ public class SettingsFragment extends Fragment implements ListAppearance.Listene
         if (AppPreferences.STYLE_MINIMAL.equals(value)) return "Minimal";
         if (AppPreferences.STYLE_GAMEBOY_3D.equals(value)) return "Game Boy 3D";
         if (AppPreferences.STYLE_SPOTIFY_2D.equals(value)) return "Streaming 2D";
-        if (AppPreferences.STYLE_XP_2D.equals(value)) return "Reproductor XP";
         if (AppPreferences.STYLE_EQUALIZER_2D.equals(value)) return "Ecualizador 2D";
         return "Clásico";
     }

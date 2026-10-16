@@ -15,7 +15,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -49,6 +48,8 @@ public final class LyricsEditorUi {
     private LinearLayout viewerColumn;
     private TextView content;
     private ScrollView lyricsScroll;
+    // Suspende el seguimiento automático mientras se desplaza manualmente la letra.
+    private long manualScrollUntilMs;
     private String lastStaticScrollKey;
     private TextView originLabel;
     private String songKey;
@@ -62,6 +63,9 @@ public final class LyricsEditorUi {
     private long timingOffsetMs = 0L;
     private boolean fullscreenHost = false;
     private boolean immersiveLimitedHost = false;
+    private boolean nativeScreenHost = false;
+    private View nativeLyricsBottom;
+    private int nativeLyricsTopInset;
     private boolean xpScreenHost = false;
     private boolean phoneScreenHost = false;
     private int xpTopInsetPx = 0;
@@ -116,6 +120,15 @@ public final class LyricsEditorUi {
         updateOverlayBounds();
     }
 
+    /** Non-immersive player: keep Lyrics above the metadata without resizing or
+     * scrolling the player underneath. The overlay lives directly on the root. */
+    public void setNativeScreenHost(boolean enabled, @Nullable View metadataRow, int topInsetPx) {
+        nativeScreenHost = enabled;
+        nativeLyricsBottom = enabled ? metadataRow : null;
+        nativeLyricsTopInset = Math.max(0, topInsetPx);
+        updateOverlayBounds();
+    }
+
     public void setSeekBoundary(@Nullable View seekBar) {
         seekBoundary = seekBar;
         updateOverlayBounds();
@@ -124,7 +137,20 @@ public final class LyricsEditorUi {
     private void updateOverlayBounds() {
         if (overlay == null || stage == null) return;
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-1, -1);
-        if (phoneScreenHost && !fullscreenHost) {
+        if (nativeScreenHost && !fullscreenHost && nativeLyricsBottom != null) {
+            // La zona de Letras ocupa desde la barra de estado hasta justo antes
+            // de título/artista. El tamaño se mide en pantalla, no en dp fijos.
+            int[] rootAt = new int[2];
+            int[] metadataAt = new int[2];
+            stage.getLocationOnScreen(rootAt);
+            nativeLyricsBottom.getLocationOnScreen(metadataAt);
+            lp.gravity = Gravity.TOP;
+            lp.topMargin = nativeLyricsTopInset;
+            int bottom = metadataAt[1] - rootAt[1] - dp(4);
+            // En el primer layout los límites todavía pueden no estar medidos.
+            // El post de show() vuelve a calcularlos con las posiciones finales.
+            lp.height = Math.max(dp(80), bottom - lp.topMargin);
+        } else if (phoneScreenHost && !fullscreenHost) {
             // PhoneSkin dibuja una LCD adaptable a toda la pantalla. Mantener
             // exactamente la misma geometría: desde debajo de «Reproductor»
             // hasta el inicio del panel de progreso (sin taparlo).
@@ -264,11 +290,14 @@ public final class LyricsEditorUi {
         lyricsScroll.addView(content, new ScrollView.LayoutParams(
                 android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                 android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
-        // Toque corto sobre la letra = cerrar; arrastrar sigue desplazando.
-        // Detectar el gesto en el ScrollView sin consumir eventos de scroll/fling.
+        // Un arrastre en letras sincronizadas no debe mover la letra ni el
+        // reproductor que está debajo. El centrado de la frase activa sigue
+        // funcionando; las letras sin tiempos conservan su scroll manual.
+        // El toque corto para cerrar el visor se conserva en ambos casos.
         final float[] touchStart = new float[2];
         final long[] touchTime = new long[1];
         final boolean[] dragged = new boolean[1];
+        final boolean[] lockedGesture = new boolean[1];
         final int touchSlop = android.view.ViewConfiguration.get(context).getScaledTouchSlop();
         lyricsScroll.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
@@ -277,29 +306,44 @@ public final class LyricsEditorUi {
                     touchStart[1] = event.getY();
                     touchTime[0] = event.getEventTime();
                     dragged[0] = false;
-                    // No bloquear la detección de arrastres horizontales del skin
-                    // hasta saber que el usuario está desplazando la letra.
-                    break;
+                    String mode = AppPreferences.prefs(context)
+                            .getString("lyrics_view_mode", "full");
+                    lockedGesture[0] = lyrics != null && lyrics.synchronizedLines
+                            && ("full".equals(mode) || "single".equals(mode));
+                    // Reservar todo el gesto al visor; ningún contenedor exterior
+                    // debe mover el reproductor al arrastrar sobre las letras.
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                    if (!lockedGesture[0]) {
+                        manualScrollUntilMs = android.os.SystemClock.uptimeMillis() + 12000L;
+                    }
+                    return lockedGesture[0];
                 case android.view.MotionEvent.ACTION_MOVE:
                     if (Math.abs(event.getX() - touchStart[0]) > touchSlop
                             || Math.abs(event.getY() - touchStart[1]) > touchSlop)
                         dragged[0] = true;
+                    if (lockedGesture[0]) return true;
                     if (dragged[0] && Math.abs(event.getY() - touchStart[1])
-                            > Math.abs(event.getX() - touchStart[0]))
+                            > Math.abs(event.getX() - touchStart[0])) {
                         v.getParent().requestDisallowInterceptTouchEvent(true);
+                        manualScrollUntilMs = android.os.SystemClock.uptimeMillis() + 12000L;
+                    }
                     break;
                 case android.view.MotionEvent.ACTION_UP:
                     v.getParent().requestDisallowInterceptTouchEvent(false);
+                    boolean consumed = lockedGesture[0];
+                    lockedGesture[0] = false;
                     if (!dragged[0] && event.getEventTime() - touchTime[0]
                             <= android.view.ViewConfiguration.getTapTimeout() + 150L) {
                         v.performClick();
                         hide();
                         return true;
                     }
-                    break;
+                    return consumed;
                 case android.view.MotionEvent.ACTION_CANCEL:
                     v.getParent().requestDisallowInterceptTouchEvent(false);
-                    break;
+                    boolean cancelledLocked = lockedGesture[0];
+                    lockedGesture[0] = false;
+                    return cancelledLocked;
             }
             return false;
         });
@@ -548,6 +592,7 @@ public final class LyricsEditorUi {
         songKey = key;
         timingOffsetMs = key == null ? 0L : AppPreferences.prefs(context)
                 .getLong(TIMING_OFFSET_PREFIX + key, 0L);
+        manualScrollUntilMs = 0L;
         lastStaticScrollKey = null;
         lyrics = null;
         lyricsOrigin = "";
@@ -665,10 +710,10 @@ public final class LyricsEditorUi {
     public void toggle() { if (isVisible()) hide(); else show(); }
     public void tick(long positionMs) {
         if (!isVisible() || lyrics == null || !lyrics.synchronizedLines || content == null) return;
-        // Conservar todo el desfase, incluso cuando adelanta líneas antes de 0:00.
-        // El visor compara contra la posición real (>= 0): las líneas desplazadas
-        // antes del inicio se consideran ya transcurridas, sin generar tiempos negativos.
-        int active = lyrics.activeLineAt(Math.max(0L, positionMs), timingOffsetMs);
+        // Clamp for an LRC that was later replaced with earlier first timestamps.
+        // This ensures no shifted line can ever have a negative time.
+        long safeOffset = Math.max(-lyrics.lines.get(0).timeMs, timingOffsetMs);
+        int active = lyrics.activeLineAt(positionMs, safeOffset);
         SharedPreferences viewPrefs = AppPreferences.prefs(context);
         String mode = viewPrefs.getString("lyrics_view_mode", "full");
         if ("cover".equals(mode)) return;
@@ -715,10 +760,12 @@ public final class LyricsEditorUi {
      * limitado al rango viejo, dejando la línea activa abajo, fuera de la vista.
      */
     private void scheduleCenter(final int offset, final int line, final String song) {
-        if (lyricsScroll == null || content == null) return;
+        if (lyricsScroll == null || content == null
+                || android.os.SystemClock.uptimeMillis() < manualScrollUntilMs) return;
         final Runnable center = new Runnable() {
             @Override public void run() {
                 if (!isVisible() || content == null || lyricsScroll == null
+                        || android.os.SystemClock.uptimeMillis() < manualScrollUntilMs
                         || !java.util.Objects.equals(song, songKey) || line != lastLine) return;
                 android.text.Layout measured = content.getLayout();
                 if (lyricsScroll.getHeight() <= 0 || measured == null) return;
@@ -831,14 +878,8 @@ public final class LyricsEditorUi {
 
     private void edit() {
         if (songKey == null) return;
-        EditText editor = new EditText(context);
-        editor.setMinLines(8);
-        editor.setGravity(Gravity.TOP);
-        editor.setHint("Una línea por renglón. Conservá las marcas [mm:ss.xx] para mantener la sincronización");
-        editor.setText(lyrics == null ? "" : toEditableText(lyrics));
-        new MaterialAlertDialogBuilder(context).setTitle("Editar letra")
-                .setView(editor).setNegativeButton("Cancelar", null)
-                .setPositiveButton("Guardar", (d, w) -> save(editor.getText().toString())).show();
+        // Recupera el editor de frases: tiempos LRC de solo lectura y texto por línea.
+        LyricsLineEditorDialog.show(context, lyrics, this::save);
     }
     /** Texto editable que conserva las marcas de tiempo, para no perder la sincronización al guardar. */
     private static String toEditableText(LrcLyrics source) {
@@ -878,14 +919,15 @@ public final class LyricsEditorUi {
         if (songKey == null || lyrics == null || !lyrics.synchronizedLines || lyrics.lines.isEmpty()) return;
         final String key = songKey;
         final LrcLyrics currentLyrics = lyrics;
+        final long earliestMs = Math.max(0L, currentLyrics.lines.get(0).timeMs);
         LrcLyrics.Line first = currentLyrics.lines.get(0);
         for (LrcLyrics.Line candidate : currentLyrics.lines) {
             if (!candidate.text.trim().isEmpty()) { first = candidate; break; }
         }
         final long firstMs = first.timeMs;
-        // La marca manual puede representar un inicio anterior a 0:00 al ajustar hacia atrás.
-        // La reproducción y el seek permanecen >= 0; el LRC original no se modifica.
-        final long[] markMs = {firstMs + timingOffsetMs};
+        // Si la letra incluye una marca inicial vacía, respetarla: tampoco debe ser negativa.
+        final long minimumMarkMs = Math.max(0L, firstMs - earliestMs);
+        final long[] markMs = {Math.max(minimumMarkMs, firstMs + timingOffsetMs)};
         final boolean[] marked = {timingOffsetMs != 0L};
         final boolean[] dragging = {false};
         // Mantener la posición recién buscada hasta que la posición observada la alcance.
@@ -940,20 +982,24 @@ public final class LyricsEditorUi {
                         "%+.1f s", (markMs[0] - firstMs) / 1000.0)
                 : "Desfase: tocá «Marcar aquí»");
         button(fine, "−0,1 s", () -> {
-            long base = marked[0] ? markMs[0] : Math.max(0L, playback.position());
-            markMs[0] = base <= Long.MIN_VALUE + 100L ? Long.MIN_VALUE : base - 100L;
+            long base = marked[0] ? markMs[0] : Math.max(minimumMarkMs, playback.position());
+            markMs[0] = Math.max(minimumMarkMs, base - 100L);
             marked[0] = true;
             update.run();
         });
         button(fine, "+0,1 s", () -> {
-            long base = marked[0] ? markMs[0] : Math.max(0L, playback.position());
-            markMs[0] = base >= Long.MAX_VALUE - 100L ? Long.MAX_VALUE : base + 100L;
+            long base = marked[0] ? markMs[0] : Math.max(minimumMarkMs, playback.position());
+            markMs[0] = Math.min(Long.MAX_VALUE - 100L, base) + 100L;
             marked[0] = true;
             update.run();
         });
         mark.setOnClickListener(v -> {
             long at = Math.max(0L, android.os.SystemClock.uptimeMillis() < seekPendingUntil[0]
                     ? seek.getProgress() : playback.position());
+            if (at < minimumMarkMs) {
+                toast("Ese momento dejaría líneas antes de 0 s");
+                return;
+            }
             markMs[0] = at;
             marked[0] = true;
             update.run();

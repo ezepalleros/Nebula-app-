@@ -4,6 +4,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.Build;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -14,6 +15,12 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.media3.session.DefaultMediaNotificationProvider;
 import androidx.media3.session.MediaSession;
 import androidx.media3.session.MediaSessionService;
+import androidx.media3.session.SessionCommand;
+import androidx.media3.session.SessionCommands;
+import androidx.media3.session.SessionResult;
+
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import com.appincreible.musicplayer.MainActivity;
 import com.appincreible.musicplayer.R;
@@ -23,6 +30,11 @@ import com.appincreible.musicplayer.player.audio.AudioEngine;
 public class PlaybackService extends MediaSessionService {
 
     private static final String TAG = "PlaybackService";
+    // Used only by Nebula's own controller to show the order the audio engine actually plays.
+    public static final String COMMAND_GET_SONG_SHUFFLE_ORDER =
+            "com.appincreible.musicplayer.GET_SONG_SHUFFLE_ORDER";
+    public static final String EXTRA_SONG_SHUFFLE_ORDER = "song_shuffle_order";
+    public static final String EXTRA_SONG_QUEUE_IDS = "song_queue_ids";
     private static final String PLAYBACK_CHANNEL_ID = "appincreible_playback_v2";
     private static final int PLAYBACK_NOTIFICATION_ID = 2101;
     // Legacy wired/Bluetooth headset hook. Using the platform keycode value keeps
@@ -69,6 +81,39 @@ public class PlaybackService extends MediaSessionService {
         mediaSession = new MediaSession.Builder(this, sessionPlayer)
                 .setSessionActivity(sessionActivity)
                 .setCallback(new MediaSession.Callback() {
+                    // Media3 1.8.0 exposes onConnect(), not onConnectAsync() (added later).
+                    @Override
+                    public MediaSession.ConnectionResult onConnect(
+                            MediaSession session, MediaSession.ControllerInfo controllerInfo) {
+                        if (!getPackageName().equals(controllerInfo.getPackageName())) {
+                            return MediaSession.Callback.super.onConnect(session, controllerInfo);
+                        }
+                        SessionCommands commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS
+                                .buildUpon()
+                                .add(new SessionCommand(COMMAND_GET_SONG_SHUFFLE_ORDER, Bundle.EMPTY))
+                                .build();
+                        return new MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                                .setAvailableSessionCommands(commands)
+                                .build();
+                    }
+
+                    @Override
+                    public ListenableFuture<SessionResult> onCustomCommand(
+                            MediaSession session, MediaSession.ControllerInfo controllerInfo,
+                            SessionCommand customCommand, Bundle args) {
+                        if (COMMAND_GET_SONG_SHUFFLE_ORDER.equals(customCommand.customAction)
+                                && getPackageName().equals(controllerInfo.getPackageName())
+                                && audioEngine != null) {
+                            Bundle result = new Bundle();
+                            result.putIntArray(EXTRA_SONG_SHUFFLE_ORDER, audioEngine.getSongShuffleOrder());
+                            result.putStringArray(EXTRA_SONG_QUEUE_IDS, audioEngine.getSongQueueMediaIds());
+                            return Futures.immediateFuture(
+                                    new SessionResult(SessionResult.RESULT_SUCCESS, result));
+                        }
+                        return MediaSession.Callback.super.onCustomCommand(
+                                session, controllerInfo, customCommand, args);
+                    }
+
                     @Override
                     public boolean onMediaButtonEvent(MediaSession session,
                                                       MediaSession.ControllerInfo controllerInfo,

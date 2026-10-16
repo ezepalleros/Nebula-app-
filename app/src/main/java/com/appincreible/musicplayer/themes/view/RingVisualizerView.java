@@ -10,7 +10,9 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.PowerManager;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 
 import com.appincreible.musicplayer.player.audio.EqualizerSpectrum;
 import com.appincreible.musicplayer.power.PowerSaverManager;
@@ -48,6 +50,10 @@ public final class RingVisualizerView extends View {
     private boolean hostVisible;
     private boolean frameScheduled;
     private boolean artworkVisible = true;
+    private boolean artworkTouchStarted;
+    private boolean artworkTapCandidate;
+    private float artworkTouchDownX;
+    private float artworkTouchDownY;
     private int ringColor = Color.rgb(57, 255, 125);
     private float intensityScale = 1f;
 
@@ -168,6 +174,54 @@ public final class RingVisualizerView extends View {
         super.onWindowVisibilityChanged(visibility);
         if (visibility == VISIBLE) scheduleFrame(); else stopFrames();
         updateAnalysisState();
+    }
+
+    // La portada del skin Anillo está dibujada en este canvas y no en la
+    // ImageView del reproductor. Solo su círculo central debe abrir Letras;
+    // no capturar deslizamientos ni toques del resto de la pantalla.
+    @Override public boolean onTouchEvent(MotionEvent event) {
+        if (!skinActive || !artworkVisible || !artworkResolved) return false;
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                artworkTouchStarted = isInsideArtwork(event.getX(), event.getY());
+                artworkTapCandidate = artworkTouchStarted;
+                artworkTouchDownX = event.getX();
+                artworkTouchDownY = event.getY();
+                return artworkTouchStarted;
+            case MotionEvent.ACTION_MOVE:
+                if (!artworkTouchStarted) return false;
+                int slop = ViewConfiguration.get(getContext()).getScaledTouchSlop();
+                if (Math.abs(event.getX() - artworkTouchDownX) > slop
+                        || Math.abs(event.getY() - artworkTouchDownY) > slop) {
+                    artworkTapCandidate = false;
+                }
+                return true;
+            case MotionEvent.ACTION_UP:
+                if (!artworkTouchStarted) return false;
+                boolean tapped = artworkTapCandidate && isInsideArtwork(event.getX(), event.getY());
+                artworkTouchStarted = false;
+                artworkTapCandidate = false;
+                if (tapped) performClick();
+                return true;
+            case MotionEvent.ACTION_CANCEL:
+                boolean wasTouching = artworkTouchStarted;
+                artworkTouchStarted = false;
+                artworkTapCandidate = false;
+                return wasTouching;
+            default:
+                return super.onTouchEvent(event);
+        }
+    }
+
+    @Override public boolean performClick() {
+        return super.performClick();
+    }
+
+    private boolean isInsideArtwork(float x, float y) {
+        float radius = Math.min(getWidth() * 0.285f, getHeight() * 0.295f) + dp(8f);
+        float dx = x - getWidth() * 0.5f;
+        float dy = y - getHeight() * 0.5f;
+        return dx * dx + dy * dy <= radius * radius;
     }
 
     @Override protected void onDraw(Canvas canvas) {

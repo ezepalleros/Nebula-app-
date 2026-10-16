@@ -254,6 +254,44 @@
                     app:srcCompat="@drawable/ic_repeat" />
             </LinearLayout>
 
+            <!-- Botones compactos: Transmitir a la izquierda, Cola a la derecha. -->
+            <LinearLayout
+                android:id="@+id/queueActionsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/castButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_marginStart="@dimen/space_8"
+                    android:layout_width="@dimen/bottom_nav_height"
+                    android:layout_height="@dimen/bottom_nav_height"
+                    android:contentDescription="Transmitir"
+                    android:minWidth="0dp"
+                    android:padding="0dp"
+                    app:cornerRadius="@dimen/music_action_size"
+                    app:icon="@drawable/ic_cast_device"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp" />
+                <View android:layout_width="0dp" android:layout_height="1dp"
+                    android:layout_weight="1" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/queueButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_marginEnd="@dimen/space_8"
+                    android:layout_width="@dimen/bottom_nav_height"
+                    android:layout_height="@dimen/bottom_nav_height"
+                    android:contentDescription="Abrir cola de reproducción"
+                    android:minWidth="0dp"
+                    android:padding="0dp"
+                    app:cornerRadius="@dimen/music_action_size"
+                    app:icon="@drawable/ic_queue_list"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp" />
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/queueToggleRow"
                 android:layout_width="match_parent"
@@ -267,6 +305,21 @@
                 android:orientation="horizontal"
                 android:paddingStart="@dimen/space_8"
                 android:paddingEnd="@dimen/space_8">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/castListButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="@dimen/music_action_size"
+                    android:layout_height="@dimen/music_action_size"
+                    android:layout_marginEnd="@dimen/space_8"
+                    android:contentDescription="Transmitir"
+                    android:minWidth="0dp"
+                    android:padding="0dp"
+                    android:visibility="gone"
+                    app:cornerRadius="@dimen/music_action_size"
+                    app:icon="@drawable/ic_cast_device"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp" />
 
                 <TextView
                     android:id="@+id/queueToggleLabel"

@@ -68,13 +68,18 @@ public final class LrclibLyricsClient {
         public final String title, artist, album;
         public final int durationSeconds;
         public final boolean synced, instrumental;
+        // /api/search devuelve también el contenido de la letra. Conservarlo
+        // evita una segunda petición HTTP que puede fallar tras seleccionar.
+        private final String syncedLyrics, plainLyrics;
         Choice(JsonObject object) {
             id = (long) number(object, "id", -1);
             title = value(object, "trackName");
             artist = value(object, "artistName");
             album = value(object, "albumName");
             durationSeconds = (int) Math.round(number(object, "duration", 0));
-            synced = !value(object, "syncedLyrics").trim().isEmpty();
+            syncedLyrics = value(object, "syncedLyrics");
+            plainLyrics = value(object, "plainLyrics");
+            synced = !syncedLyrics.trim().isEmpty();
             instrumental = bool(object, "instrumental");
         }
         public String displayLabel() {
@@ -121,18 +126,27 @@ public final class LrclibLyricsClient {
         return options;
     }
 
-    /** Recupera el registro exacto elegido por el usuario y lo guarda en la caché interna. */
+    /** Guarda exactamente la letra seleccionada: la búsqueda ya incluyó su texto.
+     * Solo consulta /get/{id} si LRCLIB devolvió un registro sin contenido. */
     public Result selectChoice(@NonNull Song song, @NonNull Choice choice) {
         try {
-            JsonElement response = fetch(HttpUrl.get(BASE + "get/" + choice.id));
-            if (response == null || !response.isJsonObject()) return new Result(Status.NOT_FOUND, null);
-            JsonObject selected = response.getAsJsonObject();
-            if (bool(selected, "instrumental")) {
+            if (choice.instrumental) {
                 state.markInstrumental(song.getMediaKey());
                 return new Result(Status.INSTRUMENTAL, null);
             }
-            String synced = value(selected, "syncedLyrics");
-            String text = !synced.trim().isEmpty() ? synced : value(selected, "plainLyrics");
+            String text = !choice.syncedLyrics.trim().isEmpty()
+                    ? choice.syncedLyrics : choice.plainLyrics;
+            if (text.trim().isEmpty()) {
+                JsonElement response = fetch(HttpUrl.get(BASE + "get/" + choice.id));
+                if (response == null || !response.isJsonObject()) return new Result(Status.NOT_FOUND, null);
+                JsonObject selected = response.getAsJsonObject();
+                if (bool(selected, "instrumental")) {
+                    state.markInstrumental(song.getMediaKey());
+                    return new Result(Status.INSTRUMENTAL, null);
+                }
+                String synced = value(selected, "syncedLyrics");
+                text = !synced.trim().isEmpty() ? synced : value(selected, "plainLyrics");
+            }
             LrcLyrics parsed = LrcParser.parse(text);
             if (parsed.lines.isEmpty()) return new Result(Status.NOT_FOUND, null);
             store.save(song.getMediaKey(), text);

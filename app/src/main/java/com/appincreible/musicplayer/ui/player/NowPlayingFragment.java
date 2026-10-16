@@ -113,6 +113,7 @@ public class NowPlayingFragment extends Fragment {
     private ShapeableImageView staticPlayerImage;
     private WebView rendererWeb;
     private LyricsEditorUi lyricsUi;
+    private View lyricsArtworkBackdrop;
     private Integer artworkVisibilityBeforeTransparentLyrics;
     private Song currentSong;
     private Song pendingDeleteSong;
@@ -124,6 +125,7 @@ public class NowPlayingFragment extends Fragment {
     private int playerGradientBottom = Color.BLACK;
     private QueueBottomSheet.QueueAdapter inlineQueueAdapter;
     private boolean queueExpanded;
+    private boolean lastQueueModeList;
     private int statusBarInsetTop;
     private int statusBarInsetBottom;
     private float artworkSwipeDownX;
@@ -193,7 +195,9 @@ public class NowPlayingFragment extends Fragment {
             if (visible) {
                 push2dVisibility();
                 enforceLyricsArtworkVisibility();
+                hideObject3dWhileLyrics();
             } else {
+                removeLyricsArtworkBackdrop();
                 restoreLyricsArtworkVisibility();
                 restoreRendererAfterLyrics();
                 // Re-assert after the layout pass: immersive 2D skins may change
@@ -205,13 +209,21 @@ public class NowPlayingFragment extends Fragment {
                 });
             }
             if (visible) {
-                binding.playerHeader.setVisibility(View.GONE);
-                applyPlayerTopInsets(false);
+                // No quitar la altura del encabezado: hacerlo desplazaba hacia arriba
+                // portada, metadatos, seek y cola al abrir Letras.
+                if (binding.playerHeader.getVisibility() == View.VISIBLE) {
+                    binding.playerHeader.setVisibility(View.INVISIBLE);
+                }
             } else {
                 applyPlayerElementVisibility(AppPreferences.STYLE_RING.equals(activeStyle));
             }
         });
         createStaticPlayerImage();
+        // El skin Anillo dibuja la portada en RingVisualizerView. La ImageView
+        // nativa queda oculta y su listener no recibe los toques.
+        binding.ringVisualizer.setOnClickListener(v -> {
+            if (AppPreferences.STYLE_RING.equals(activeStyle)) toggleLyricsViewer();
+        });
         applyPlayerAppearance();
         loadArtworkForRenderers(currentArtworkUri);
 
@@ -239,7 +251,11 @@ public class NowPlayingFragment extends Fragment {
         });
         binding.inlineQueueList.setItemAnimator(null);
         binding.inlineQueueList.setAdapter(inlineQueueAdapter);
+        QueueBottomSheet.attachReordering(binding.inlineQueueList, inlineQueueAdapter, viewModel);
         binding.queueToggleRow.setOnClickListener(v -> setQueueExpanded(!queueExpanded));
+        binding.queueButton.setOnClickListener(v -> openQueueSheet());
+        binding.castButton.setOnClickListener(v -> openSystemCastSettings());
+        binding.castListButton.setOnClickListener(v -> openSystemCastSettings());
         binding.standardPlayerScroll.setOnScrollChangeListener(
                 (NestedScrollView.OnScrollChangeListener) (scroll, scrollX, scrollY, oldScrollX, oldScrollY) -> {
                     if (!queueExpanded) {
@@ -306,6 +322,7 @@ public class NowPlayingFragment extends Fragment {
         });
         viewModel.getShuffleEnabled().observe(getViewLifecycleOwner(), enabled -> {
             shuffleEnabled = Boolean.TRUE.equals(enabled);
+            if (inlineQueueAdapter != null) inlineQueueAdapter.setReorderEnabled(!shuffleEnabled);
             renderPlaybackModes();
         });
         viewModel.getRadioMedia().observe(getViewLifecycleOwner(), isRadio -> {
@@ -437,6 +454,8 @@ public class NowPlayingFragment extends Fragment {
             // or Glide bitmap update cannot reveal the cover behind the lyrics.
             staticPlayerImage.setImageAlpha(0);
         }
+        // Renderer refreshes can resurrect the model or the fallback artwork.
+        hideObject3dWhileLyrics();
     }
 
     private void restoreLyricsArtworkVisibility() {
@@ -451,6 +470,64 @@ public class NowPlayingFragment extends Fragment {
             }
         }
         artworkVisibilityBeforeTransparentLyrics = null;
+    }
+
+    /** Anillo retains its working opaque backdrop; 3D objects must vanish instead. */
+    private boolean needsPlainLyricsBackdrop() {
+        return AppPreferences.STYLE_RING.equals(activeStyle);
+    }
+
+    private boolean isObject3dSkin() {
+        return AppPreferences.STYLE_VINYL.equals(activeStyle)
+                || AppPreferences.STYLE_CASSETTE.equals(activeStyle)
+                || AppPreferences.STYLE_WALKMAN.equals(activeStyle)
+                || AppPreferences.STYLE_RETRO.equals(activeStyle)
+                || AppPreferences.STYLE_PIXEL.equals(activeStyle)
+                || AppPreferences.STYLE_GAMEBOY_3D.equals(activeStyle);
+    }
+
+    private boolean object3dLyricsVisible() {
+        return isObject3dSkin() && lyricsUi != null && lyricsUi.isVisible();
+    }
+
+    /** Keep both WebGL and the native artwork fallback invisible only in 3D lyrics. */
+    private void hideObject3dWhileLyrics() {
+        if (!object3dLyricsVisible()) return;
+        if (rendererWeb != null && !rendererTwoDimensional) {
+            rendererWeb.animate().cancel();
+            rendererWeb.setAlpha(0f);
+            rendererWeb.setVisibility(View.INVISIBLE);
+        }
+        if (staticPlayerImage != null) {
+            staticPlayerImage.animate().cancel();
+            staticPlayerImage.setAlpha(0f);
+            staticPlayerImage.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    private void installLyricsArtworkBackdrop(boolean fullscreen) {
+        removeLyricsArtworkBackdrop();
+        // Fullscreen already has its own opaque overlay; never modify it.
+        if (binding == null || fullscreen || !needsPlainLyricsBackdrop()) return;
+        View backdrop = new View(requireContext());
+        backdrop.setBackgroundColor(Color.BLACK);
+        backdrop.setClickable(false);
+        backdrop.setFocusable(false);
+        backdrop.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        // Only Anillo needs this layer; the 3D object renderer is hidden instead.
+        backdrop.setElevation(4f * getResources().getDisplayMetrics().density);
+        binding.artworkStage.addView(backdrop, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        lyricsArtworkBackdrop = backdrop;
+        // LyricsEditorUi.show() brings its overlay in front of this new child.
+    }
+
+    private void removeLyricsArtworkBackdrop() {
+        if (lyricsArtworkBackdrop != null) {
+            if (lyricsArtworkBackdrop.getParent() instanceof ViewGroup)
+                ((ViewGroup) lyricsArtworkBackdrop.getParent()).removeView(lyricsArtworkBackdrop);
+            lyricsArtworkBackdrop = null;
+        }
     }
 
     /** Restore the actual drawing surface, not just the fallback ImageView.
@@ -663,6 +740,7 @@ public class NowPlayingFragment extends Fragment {
                             rendererWeb.setTranslationX(0f);
                             rendererWeb.setVisibility(View.VISIBLE);
                             rendererWeb.setAlpha(1f);
+                            hideObject3dWhileLyrics();
                         }
                     }
                 }, Math.max(1400L, duration * 7L));
@@ -770,6 +848,7 @@ public class NowPlayingFragment extends Fragment {
                     // 3D/native renderer: the new artwork is ready, so now bring the renderer in.
                     rendererRefreshInPlace = false;
                     completePendingArtworkSwipe();
+                    hideObject3dWhileLyrics();
                     return;
                 }
                 boolean finishing2dSwipe = artworkSwipeTransitionRunning && rendererTwoDimensional;
@@ -786,6 +865,7 @@ public class NowPlayingFragment extends Fragment {
                     } else {
                         revealRenderer();
                     }
+                    hideObject3dWhileLyrics();
                 }
             });
         }
@@ -845,6 +925,10 @@ public class NowPlayingFragment extends Fragment {
     private void revealRenderer() {
         if (binding == null || rendererWeb == null || !rendererContentReady
                 || PowerSaverManager.isActive(requireContext())) return;
+        if (object3dLyricsVisible()) {
+            hideObject3dWhileLyrics();
+            return;
+        }
         rendererWeb.setVisibility(View.VISIBLE);
         rendererWeb.animate().cancel();
         rendererWeb.setAlpha(0f);
@@ -1045,13 +1129,15 @@ public class NowPlayingFragment extends Fragment {
         boolean lyricsFullscreen = AppPreferences.prefs(requireContext())
                 .getInt("lyrics_view_fullscreen", 0) == 1;
         lyricsUi.setFullscreenHost(lyricsFullscreen);
-        // El host inmersivo de Spotify llena la pantalla: usar la raíz con
-        // límites propios para que el visor normal no cubra sus controles.
-        lyricsUi.setHost(lyricsFullscreen || immersive2d
-                ? binding.getRoot() : binding.artworkStage);
+        // El visor normal se monta sobre la raíz, nunca dentro del NestedScrollView.
+        // Así no mueve las filas del reproductor y el scroll de Letras es independiente.
+        lyricsUi.setHost(binding.getRoot());
+        lyricsUi.setNativeScreenHost(!lyricsFullscreen && !immersive2d,
+                binding.metadataRow, statusBarInsetTop);
         lyricsUi.setImmersiveLimitedHost(!lyricsFullscreen && immersive2d && !xpSkin && !phoneSkin);
         lyricsUi.setXpScreenHost(xpSkin, statusBarInsetTop, statusBarInsetBottom);
         lyricsUi.setPhoneScreenHost(phoneSkin, statusBarInsetTop, statusBarInsetBottom);
+        installLyricsArtworkBackdrop(lyricsFullscreen);
         lyricsUi.show();
         // La barra se ubica después del layout; no permitir que el visor
         // transparente intercepte sus toques al abrir Letras.
@@ -1502,7 +1588,12 @@ public class NowPlayingFragment extends Fragment {
             if (statusBarInsetTop != bars.top || statusBarInsetBottom != bottom) {
                 statusBarInsetTop = bars.top;
                 statusBarInsetBottom = bottom;
-                applyPlayerTopInsets(binding.playerHeader.getVisibility() == View.VISIBLE);
+                // INVISIBLE también reserva el espacio de la cabecera con Letras.
+                applyPlayerTopInsets(binding.playerHeader.getVisibility() != View.GONE);
+                if (lyricsUi != null && lyricsUi.isVisible()) {
+                    lyricsUi.setNativeScreenHost(!immersive2d, binding.metadataRow,
+                            statusBarInsetTop);
+                }
                 pushXp2dInsets();
                 pushPhone2dInsets();
                 if (lyricsUi != null && lyricsUi.isVisible()
@@ -1540,10 +1631,30 @@ public class NowPlayingFragment extends Fragment {
         }
     }
 
+    private void openQueueSheet() {
+        if (radioMedia || !AppPreferences.showPlayerQueue(requireContext())) return;
+        if (getParentFragmentManager().findFragmentByTag("now_playing_queue") == null) {
+            new QueueBottomSheet().show(getParentFragmentManager(), "now_playing_queue");
+        }
+    }
+
+    private void openSystemCastSettings() {
+        // No hay Cast SDK en la app: abrir la configuración de transmisión del sistema.
+        try {
+            startActivity(new Intent("android.settings.CAST_SETTINGS"));
+        } catch (android.content.ActivityNotFoundException ignored) {
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setMessage("Este dispositivo no ofrece una pantalla de transmisión compatible.")
+                    .setPositiveButton("Aceptar", null).show();
+        }
+    }
+
     private void setQueueExpanded(boolean expanded) {
         if (binding == null) return;
-        boolean allowed = AppPreferences.showPlayerQueue(requireContext()) && !radioMedia;
+        boolean allowed = AppPreferences.showPlayerQueue(requireContext()) && !radioMedia
+                && AppPreferences.PLAYER_QUEUE_LIST.equals(AppPreferences.getPlayerQueuePresentation(requireContext()));
         queueExpanded = allowed && expanded;
+        // Collapsed mode keeps the next-song preview visible; only the full list stays closed.
         binding.inlineQueueContainer.setVisibility(allowed ? View.VISIBLE : View.GONE);
         binding.inlineQueueContainer.setAlpha(1f);
         binding.queueToggleRow.setSelected(queueExpanded);
@@ -1616,6 +1727,9 @@ public class NowPlayingFragment extends Fragment {
         String style = AppPreferences.getPlayerStyle(requireContext());
         boolean styleChanged = !style.equals(activeStyle);
         activeStyle = style;
+        if (styleChanged && lyricsArtworkBackdrop != null && !needsPlainLyricsBackdrop()) {
+            removeLyricsArtworkBackdrop();
+        }
         boolean powerSaver = PowerSaverManager.isActive(requireContext());
         immersive2d = !powerSaver && AppPreferences.isImmersiveTwoDimensionalStyle(style);
 
@@ -1634,6 +1748,7 @@ public class NowPlayingFragment extends Fragment {
         binding.ringVisualizer.setArtworkVisible(AppPreferences.showPlayerArtwork(requireContext()));
         binding.ringVisualizer.applyPreferences();
         attachStaticArtworkToHost(rendererHost());
+        hideObject3dWhileLyrics();
         applyPlayerElementVisibility(ringSkin);
         binding.seekBar.setProgressStyle(AppPreferences.getPlayerProgressStyle(requireContext()));
         binding.seekBar.setProgressEmoji(AppPreferences.getPlayerProgressEmoji(requireContext()));
@@ -1745,6 +1860,7 @@ public class NowPlayingFragment extends Fragment {
         boolean showHeader = AppPreferences.showPlayerHeaderLabel(requireContext());
         boolean showMusic = AppPreferences.showPlayerMusicButton(requireContext());
         boolean showQueue = AppPreferences.showPlayerQueue(requireContext()) && !radioMedia;
+        boolean showCast = AppPreferences.showPlayerCast(requireContext());
         boolean showMore = showMusic;
         boolean xpImmersive = immersive2d && (AppPreferences.STYLE_XP_2D.equals(activeStyle)
                 || AppPreferences.STYLE_PHONE_2D.equals(activeStyle));
@@ -1754,14 +1870,29 @@ public class NowPlayingFragment extends Fragment {
         binding.headerLabel.setVisibility(showHeader ? View.VISIBLE : View.GONE);
         binding.moreButton.setVisibility(showMore ? View.VISIBLE : View.GONE);
         boolean lyricsShowing = lyricsUi != null && lyricsUi.isVisible();
-        binding.playerHeader.setVisibility(anyHeader && !lyricsShowing ? View.VISIBLE : View.GONE);
-        binding.queueToggleRow.setVisibility(showQueue ? View.VISIBLE : View.GONE);
-        if (showQueue) {
-            setQueueExpanded(queueExpanded);
+        // INVISIBLE conserva el espacio de la cabecera mientras las letras usan
+        // esa zona. GONE modificaba el margen del scroll y hacía saltar toda la UI.
+        binding.playerHeader.setVisibility(!anyHeader ? View.GONE
+                : lyricsShowing ? View.INVISIBLE : View.VISIBLE);
+        boolean listMode = AppPreferences.PLAYER_QUEUE_LIST.equals(
+                AppPreferences.getPlayerQueuePresentation(requireContext()));
+        boolean inlineQueue = listMode && showQueue;
+        binding.queueActionsRow.setVisibility(inlineQueue || (!showQueue && !showCast)
+                ? View.GONE : View.VISIBLE);
+        binding.castButton.setVisibility(showCast && !inlineQueue ? View.VISIBLE : View.GONE);
+        binding.queueButton.setVisibility(showQueue && !listMode ? View.VISIBLE : View.GONE);
+        // Transmitir comparte encabezado con la cola: no añade una fila de altura.
+        binding.castListButton.setVisibility(inlineQueue && showCast ? View.VISIBLE : View.GONE);
+        binding.queueToggleRow.setVisibility(showQueue && listMode ? View.VISIBLE : View.GONE);
+        if (showQueue && listMode) {
+            // Never expand automatically when opening a track or switching to List.
+            setQueueExpanded(lastQueueModeList && queueExpanded);
         } else {
             setQueueExpanded(false);
         }
-        applyPlayerTopInsets(anyHeader && !lyricsShowing);
+        lastQueueModeList = showQueue && listMode;
+        // Los insets dependen de si el estilo tiene cabecera, no de si Letras está abierta.
+        applyPlayerTopInsets(anyHeader);
 
         boolean showArtwork = AppPreferences.showPlayerArtwork(requireContext());
         binding.artworkStage.setVisibility((showArtwork || ringSkin) ? View.VISIBLE : View.GONE);
@@ -1924,6 +2055,10 @@ public class NowPlayingFragment extends Fragment {
         binding.moreButton.setBackgroundTintList(ColorStateList.valueOf(headerSurface));
         binding.previous.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
         binding.next.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
+        // Match Cast / Queue buttons to Previous / Next instead of theme-default teal.
+        binding.castButton.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
+        binding.queueButton.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
+        binding.castListButton.setBackgroundTintList(ColorStateList.valueOf(subtleSurface));
         binding.queueToggleLabel.setTextColor(playerContentColor);
         binding.queueStateIcon.setColorFilter(playerContentColor);
         binding.inlineQueueEmpty.setTextColor(playerSecondaryColor);
@@ -1931,6 +2066,9 @@ public class NowPlayingFragment extends Fragment {
         binding.moreButton.setIconTint(ColorStateList.valueOf(headerContent));
         binding.previous.setIconTint(ColorStateList.valueOf(playerContentColor));
         binding.next.setIconTint(ColorStateList.valueOf(playerContentColor));
+        binding.castButton.setIconTint(ColorStateList.valueOf(playerContentColor));
+        binding.queueButton.setIconTint(ColorStateList.valueOf(playerContentColor));
+        binding.castListButton.setIconTint(ColorStateList.valueOf(playerContentColor));
         binding.playPause.setBackgroundTintList(ColorStateList.valueOf(playerAccentColor));
         binding.playPause.setIconTint(ColorStateList.valueOf(UiPalette.readableTextColor(playerAccentColor)));
         binding.seekBar.setPlayerColors(playerAccentColor, playerSecondaryColor);
@@ -2023,6 +2161,7 @@ public class NowPlayingFragment extends Fragment {
     }
 
     @Override public void onDestroyView() {
+        removeLyricsArtworkBackdrop();
         if (appearanceListener != null && isAdded()) {
             AppPreferences.prefs(requireContext()).unregisterOnSharedPreferenceChangeListener(appearanceListener);
             appearanceListener = null;

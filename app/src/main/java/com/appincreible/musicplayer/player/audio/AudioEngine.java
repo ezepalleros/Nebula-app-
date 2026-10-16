@@ -95,6 +95,83 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
     GainAudioProcessor standbyGain() { return standbyGain; }
     List<MediaItem> queue() { return Collections.unmodifiableList(queue); }
 
+    /** Upcoming playback order, starting at the currently playing song.
+     *
+     * The raw shuffle permutation is not the playback queue: the current track
+     * can be in the middle of it, and Next first replays forward song history
+     * after Previous. Expose the same next-track decisions to the UI instead.
+     */
+    public int[] getSongShuffleOrder() {
+        int size = queue.size();
+        if (!isSongQueue() || !activePlayer.getShuffleModeEnabled()
+                || songShuffleOrder.length != size) return new int[0];
+        int current = activePlayer.getCurrentMediaItemIndex();
+        if (current < 0 || current >= size) return new int[0];
+
+        // This is the complete queue display, not just the few remaining tracks.
+        // Repeat-one and reaching the final shuffled item must not collapse the
+        // list to a single song: the user can still choose any queued track.
+        List<Integer> upcoming = new ArrayList<>(size);
+        Set<Integer> included = new HashSet<>();
+        upcoming.add(current);
+        included.add(current);
+
+        int tail = current;
+        boolean historyAhead = false;
+        // These are precisely the songs selected by seekToNextSongInHistory().
+        if (songHistoryCursor >= 0 && songHistoryCursor < songHistory.size()
+                && queue.get(current).mediaId.equals(songHistory.get(songHistoryCursor))) {
+            for (int i = songHistoryCursor + 1; i < songHistory.size(); i++) {
+                int index = findQueueIndex(songHistory.get(i));
+                if (index == C.INDEX_UNSET) break;
+                historyAhead = true;
+                tail = index;
+                if (included.add(index)) upcoming.add(index);
+            }
+        }
+
+        // The physical player decides the first unplayed item. In particular it
+        // knows whether the end of the queue is reached with repeat disabled.
+        if (!historyAhead) {
+            int next = activePlayer.getNextMediaItemIndex();
+            if (next != C.INDEX_UNSET && next != current) {
+                tail = next;
+                if (included.add(next)) upcoming.add(next);
+            }
+        }
+
+        int tailPosition = -1;
+        for (int i = 0; i < songShuffleOrder.length; i++) {
+            if (songShuffleOrder[i] == tail) {
+                tailPosition = i;
+                break;
+            }
+        }
+        if (tailPosition < 0) return toIndexArray(upcoming);
+
+        // Show every queued song once. Wrapping here is only for display;
+        // ExoPlayer still obeys the saved repeat mode for actual playback.
+        for (int step = 1; step <= size; step++) {
+            int index = songShuffleOrder[(tailPosition + step) % size];
+            if (included.add(index)) upcoming.add(index);
+        }
+        return toIndexArray(upcoming);
+    }
+
+    private static int[] toIndexArray(List<Integer> indices) {
+        int[] array = new int[indices.size()];
+        for (int i = 0; i < indices.size(); i++) array[i] = indices.get(i);
+        return array;
+    }
+
+    /** Allows the UI to reject a response from a replaced queue. */
+    public String[] getSongQueueMediaIds() {
+        if (!isSongQueue()) return new String[0];
+        String[] ids = new String[queue.size()];
+        for (int i = 0; i < queue.size(); i++) ids[i] = queue.get(i).mediaId;
+        return ids;
+    }
+
     public void setMediaItems(List<MediaItem> mediaItems, int startIndex, long startPositionMs) {
         transitionEngine.cancelForQueueChange();
         clearPreviousRestartGuard();
@@ -144,6 +221,49 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
         });
         if (structuralChange) resetSongHistory(activePlayer.getCurrentMediaItem());
         applyNormalization(activePlayer, activeGain);
+    }
+
+    /** Keep the logical queue and the physical player in sync when a song is dragged. */
+    public void moveMediaItems(int fromIndex, int toIndex, int newIndex) {
+        int size = queue.size();
+        int movedCount = toIndex - fromIndex;
+        if (!isSongQueue() || fromIndex < 0 || movedCount <= 0 || toIndex > size
+                || newIndex < 0 || newIndex > size - movedCount || newIndex == fromIndex) return;
+
+        // Media3's ForwardingSimpleBasePlayer normally moves only its physical player.
+        // Keep AudioEngine.queue (used by transitions and preloading) in the same order.
+        List<Integer> oldIndicesInNewOrder = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) oldIndicesInNewOrder.add(i);
+        List<Integer> movedIndices = new ArrayList<>(oldIndicesInNewOrder.subList(fromIndex, toIndex));
+        oldIndicesInNewOrder.subList(fromIndex, toIndex).clear();
+        oldIndicesInNewOrder.addAll(newIndex, movedIndices);
+
+        List<MediaItem> moving = new ArrayList<>(queue.subList(fromIndex, toIndex));
+        queue.subList(fromIndex, toIndex).clear();
+        queue.addAll(newIndex, moving);
+
+        // Shuffle must still point to the same songs after their timeline indices change.
+        if (songShuffleOrder.length == size) {
+            int[] oldToNew = new int[size];
+            for (int i = 0; i < size; i++) oldToNew[oldIndicesInNewOrder.get(i)] = i;
+            for (int i = 0; i < songShuffleOrder.length; i++) {
+                songShuffleOrder[i] = oldToNew[songShuffleOrder[i]];
+            }
+        }
+
+        transitionEngine.cancelForQueueChange();
+        clearPreviousRestartGuard();
+        internal(() -> {
+            activePlayer.moveMediaItems(fromIndex, toIndex, newIndex);
+            // Any preloaded next song may now refer to a stale index.
+            if (standbyPlayer != null) {
+                standbyPlayer.stop();
+                standbyPlayer.clearMediaItems();
+                standbyGain.setEnvelopeImmediately(0f);
+            }
+            activeGain.setEnvelopeImmediately(activePlayer.getPlayWhenReady() ? 1f : 0f);
+            applySharedShuffleOrder();
+        });
     }
 
     public void prepare() { internal(activePlayer::prepare); }
@@ -438,6 +558,16 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
     public void setShuffleModeEnabled(boolean enabled) {
         boolean changed = activePlayer.getShuffleModeEnabled() != enabled;
         internal(() -> {
+            if (changed && enabled && isSongQueue()
+                    && isSong(activePlayer.getCurrentMediaItem())) {
+                // Every OFF -> ON starts a fresh shuffle cycle with the current
+                // song first. Otherwise, if it was the last item in the old
+                // permutation, Media3 reports no next item and the UI shrinks.
+                shuffleSeed = shuffleRandom.nextLong();
+                regenerateSongShuffleOrder();
+                rotateSongShuffleOrderToCurrent();
+                applySharedShuffleOrder();
+            }
             activePlayer.setShuffleModeEnabled(enabled);
             if (standbyPlayer != null) standbyPlayer.setShuffleModeEnabled(enabled);
         });
@@ -616,6 +746,23 @@ public final class AudioEngine implements SharedPreferences.OnSharedPreferenceCh
             indices[count++] = index;
         }
         if (count == indices.length) songShuffleOrder = indices;
+    }
+
+    private void rotateSongShuffleOrderToCurrent() {
+        int current = activePlayer.getCurrentMediaItemIndex();
+        int size = songShuffleOrder.length;
+        if (size != queue.size() || current < 0 || current >= size) return;
+        int pivot = -1;
+        for (int i = 0; i < size; i++) {
+            if (songShuffleOrder[i] == current) {
+                pivot = i;
+                break;
+            }
+        }
+        if (pivot <= 0) return;
+        int[] rotated = new int[size];
+        for (int i = 0; i < size; i++) rotated[i] = songShuffleOrder[(pivot + i) % size];
+        songShuffleOrder = rotated;
     }
 
     private void promoteShuffleTargetToNext(int targetIndex) {

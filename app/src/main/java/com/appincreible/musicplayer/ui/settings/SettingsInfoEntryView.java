@@ -79,7 +79,11 @@ public final class SettingsInfoEntryView extends FrameLayout implements ListAppe
     private void applyAppearance() {
         if (card == null) return;
         ListAppearance.Appearance appearance = ListAppearance.resolve(getContext());
-        int accent = ContextCompat.getColor(getContext(), R.color.settings_category_navigation);
+        // Información uses its own ninth accent (white). Keep it visible in light mode.
+        int accent = ContextCompat.getColor(getContext(), R.color.settings_category_information);
+        if (ColorUtils.calculateContrast(accent, appearance.effectiveSurface) < 3.0d) {
+            accent = 0xFF45506A;
+        }
         card.setCardBackgroundColor(appearance.containerColor);
         card.setStrokeColor(ColorUtils.setAlphaComponent(accent, appearance.transparent ? 210 : 120));
         icon.setImageTintList(ColorStateList.valueOf(accent));

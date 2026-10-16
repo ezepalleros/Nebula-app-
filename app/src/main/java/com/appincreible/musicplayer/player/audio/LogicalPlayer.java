@@ -65,6 +65,13 @@ public final class LogicalPlayer extends ForwardingSimpleBasePlayer {
     }
 
     @Override
+    protected ListenableFuture<?> handleMoveMediaItems(int fromIndex, int toIndex, int newIndex) {
+        // Do not forward directly to ExoPlayer: transitions also use AudioEngine.queue.
+        engine.moveMediaItems(fromIndex, toIndex, newIndex);
+        return Futures.immediateVoidFuture();
+    }
+
+    @Override
     protected ListenableFuture<?> handlePrepare() {
         engine.prepare();
         return Futures.immediateVoidFuture();

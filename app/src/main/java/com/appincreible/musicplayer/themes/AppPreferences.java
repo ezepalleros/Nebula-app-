@@ -48,6 +48,10 @@ public final class AppPreferences {
     public static final String KEY_SHOW_PLAYER_ALBUM = "show_player_album";
     public static final String KEY_SHOW_PLAYER_SHUFFLE = "show_player_shuffle";
     public static final String KEY_SHOW_PLAYER_QUEUE = "show_player_queue";
+    public static final String KEY_SHOW_PLAYER_CAST = "show_player_cast";
+    public static final String KEY_PLAYER_QUEUE_PRESENTATION = "player_queue_presentation";
+    public static final String PLAYER_QUEUE_BUTTON = "button";
+    public static final String PLAYER_QUEUE_LIST = "list";
     public static final String KEY_SHOW_PLAYER_REPEAT = "show_player_repeat";
     public static final String KEY_SHOW_PLAYER_MODE_TEXT = "show_player_mode_text";
 
@@ -330,6 +334,11 @@ public final class AppPreferences {
     public static boolean showPlayerAlbum(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_ALBUM, false); }
     public static boolean showPlayerShuffle(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_SHUFFLE, true); }
     public static boolean showPlayerQueue(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_QUEUE, true); }
+    public static boolean showPlayerCast(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_CAST, true); }
+    public static String getPlayerQueuePresentation(Context context) {
+        String value = prefs(context).getString(KEY_PLAYER_QUEUE_PRESENTATION, PLAYER_QUEUE_BUTTON);
+        return PLAYER_QUEUE_LIST.equals(value) ? PLAYER_QUEUE_LIST : PLAYER_QUEUE_BUTTON;
+    }
     public static boolean showPlayerRepeat(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_REPEAT, true); }
     public static boolean showPlayerModeText(Context context) { return prefs(context).getBoolean(KEY_SHOW_PLAYER_MODE_TEXT, true); }
     public static String getPlayerStyle(Context context) {

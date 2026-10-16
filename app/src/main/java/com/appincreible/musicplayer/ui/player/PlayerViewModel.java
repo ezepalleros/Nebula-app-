@@ -162,6 +162,9 @@ public class PlayerViewModel extends AndroidViewModel implements PlayerControlle
     public void seekTo(long positionMs) { playerController.seekTo(positionMs); }
     public void jumpToQueueItem(int mediaItemIndex) { playerController.jumpToQueueItem(mediaItemIndex); }
     public void removeQueueItem(int mediaItemIndex) { playerController.removeQueueItem(mediaItemIndex); }
+    public void moveQueueItem(int fromIndex, int toIndex) {
+        playerController.moveQueueItem(fromIndex, toIndex);
+    }
     public void toggleShuffle() { playerController.toggleShuffle(); }
     public void enableShuffle() { playerController.enableShuffle(); }
     public void cycleRepeatMode() { playerController.cycleRepeatMode(); }

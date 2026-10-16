@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -14,19 +15,20 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.Timeline;
+import androidx.media3.session.SessionCommand;
+import androidx.media3.session.SessionResult;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
 import com.appincreible.musicplayer.player.audio.AudioPreferences;
 import com.appincreible.musicplayer.themes.AppPreferences;
 import com.appincreible.musicplayer.player.service.PlaybackService;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class PlayerController implements SharedPreferences.OnSharedPreferenceChangeListener {
 
@@ -75,6 +77,11 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
     private int radioRequestGeneration;
     private String radioTargetMediaId = "";
     private boolean applyingSavedModes;
+    private boolean manuallyReorderedSongQueue;
+    private int queueRequestGeneration;
+    private int shuffleQueueRetries;
+    private final SessionCommand shuffleOrderCommand = new SessionCommand(
+            PlaybackService.COMMAND_GET_SONG_SHUFFLE_ORDER, Bundle.EMPTY);
     private List<MediaItem> lastRadioQueue = new ArrayList<>();
     private int lastRadioIndex = C.INDEX_UNSET;
     private boolean lastRadioQueueFavorites;
@@ -174,6 +181,7 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
         if (items == null || items.isEmpty()) return;
         cancelRadioConnectionState();
         runWhenReady(() -> {
+            manuallyReorderedSongQueue = false;
             controller.setMediaItems(items, startIndex, 0L);
             // Honor the user's last choice instead of forcing repeat on every selection.
             applySavedModes(false);
@@ -217,6 +225,20 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
             }
             if (sameQueue) return;
 
+            // Clearing a search can publish the library in its original sort order.
+            // Don't silently discard a user's manual order when the songs are the same.
+            if (manuallyReorderedSongQueue && controller.getMediaItemCount() == items.size()) {
+                List<String> existingIds = new ArrayList<>();
+                List<String> requestedIds = new ArrayList<>();
+                for (int i = 0; i < items.size(); i++) {
+                    existingIds.add(controller.getMediaItemAt(i).mediaId);
+                    requestedIds.add(items.get(i).mediaId);
+                }
+                Collections.sort(existingIds);
+                Collections.sort(requestedIds);
+                if (existingIds.equals(requestedIds)) return;
+            }
+            manuallyReorderedSongQueue = false;
             long positionMs = Math.max(0L, controller.getCurrentPosition());
             boolean playWhenReady = controller.getPlayWhenReady();
             controller.setMediaItems(items, targetIndex, positionMs);
@@ -392,6 +414,16 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
         controller.replaceMediaItems(mediaItemIndex, mediaItemIndex + 1, Collections.emptyList());
     }
 
+    /** Reorder local media items without resetting playback, seek position or saved modes. */
+    public void moveQueueItem(int fromIndex, int toIndex) {
+        if (controller == null || isCurrentRadio()) return;
+        int size = controller.getMediaItemCount();
+        if (fromIndex < 0 || fromIndex >= size || toIndex < 0 || toIndex >= size
+                || fromIndex == toIndex || !controller.isCommandAvailable(Player.COMMAND_CHANGE_MEDIA_ITEMS)) return;
+        manuallyReorderedSongQueue = true;
+        controller.moveMediaItem(fromIndex, toIndex);
+    }
+
     public void seekTo(long positionMs) { if (controller != null) controller.seekTo(positionMs); }
     public void toggleShuffle() { if (controller != null) controller.setShuffleModeEnabled(!controller.getShuffleModeEnabled()); }
     public void enableShuffle() { runWhenReady(() -> controller.setShuffleModeEnabled(true)); }
@@ -451,24 +483,92 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
 
     private void publishQueue() {
         if (controller == null) return;
-        MediaItem currentItem = controller.getCurrentMediaItem();
-        int currentIndex = controller.getCurrentMediaItemIndex();
+        final MediaController currentController = controller;
+        final int request = ++queueRequestGeneration;
+        MediaItem currentItem = currentController.getCurrentMediaItem();
+        int currentIndex = currentController.getCurrentMediaItemIndex();
         if (currentItem == null || isRadio(currentItem) || currentIndex == C.INDEX_UNSET) {
+            shuffleQueueRetries = 0;
             callback.onQueueChanged(Collections.emptyList());
             return;
         }
 
-        List<QueueEntry> ordered = new ArrayList<>();
-        Set<Integer> visited = new HashSet<>();
-        int index = currentIndex;
-        Timeline timeline = controller.getCurrentTimeline();
-        while (index != C.INDEX_UNSET && index >= 0 && index < controller.getMediaItemCount()
-                && visited.add(index)) {
-            ordered.add(toQueueEntry(index, index == currentIndex));
-            if (timeline.isEmpty()) break;
-            index = timeline.getNextWindowIndex(index, controller.getRepeatMode(), controller.getShuffleModeEnabled());
+        int count = currentController.getMediaItemCount();
+        if (!currentController.getShuffleModeEnabled()) {
+            shuffleQueueRetries = 0;
+            // Timeline order is the actual order only with shuffle off.
+            List<QueueEntry> normal = new ArrayList<>(count);
+            for (int i = 0; i < count; i++) normal.add(toQueueEntry(i, i == currentIndex));
+            callback.onQueueChanged(normal);
+            return;
         }
-        callback.onQueueChanged(ordered);
+
+        // The session reports the actual shuffle permutation and forward history.
+        // Do not replace an entire visible queue with a one-song placeholder when
+        // a mode switch races the asynchronous session command.
+        if (!currentController.getAvailableSessionCommands().contains(shuffleOrderCommand)) {
+            android.util.Log.w("NebulaQueue", "Shuffle order command not ready");
+            retryShuffleQueue(currentController, request);
+            return;
+        }
+        ListenableFuture<SessionResult> future = currentController.sendCustomCommand(
+                shuffleOrderCommand, Bundle.EMPTY);
+        future.addListener(() -> {
+            if (currentController != controller || request != queueRequestGeneration
+                    || !currentController.getShuffleModeEnabled()) return;
+            try {
+                SessionResult result = Futures.getDone(future);
+                if (result.resultCode != SessionResult.RESULT_SUCCESS) {
+                    retryShuffleQueue(currentController, request);
+                    return;
+                }
+                int[] order = result.extras.getIntArray(PlaybackService.EXTRA_SONG_SHUFFLE_ORDER);
+                String[] ids = result.extras.getStringArray(PlaybackService.EXTRA_SONG_QUEUE_IDS);
+                int size = currentController.getMediaItemCount();
+                if (order == null || ids == null || size == 0
+                        || order.length != size || ids.length != size) {
+                    retryShuffleQueue(currentController, request);
+                    return;
+                }
+                for (int i = 0; i < size; i++) {
+                    if (!java.util.Objects.equals(ids[i], currentController.getMediaItemAt(i).mediaId)) {
+                        retryShuffleQueue(currentController, request);
+                        return;
+                    }
+                }
+                if (order[0] != currentController.getCurrentMediaItemIndex()) {
+                    retryShuffleQueue(currentController, request);
+                    return;
+                }
+                boolean[] seen = new boolean[size];
+                List<QueueEntry> shuffled = new ArrayList<>(size);
+                int playingIndex = currentController.getCurrentMediaItemIndex();
+                for (int index : order) {
+                    if (index < 0 || index >= size || seen[index]) {
+                        retryShuffleQueue(currentController, request);
+                        return;
+                    }
+                    seen[index] = true;
+                    shuffled.add(toQueueEntry(index, index == playingIndex));
+                }
+                shuffleQueueRetries = 0;
+                callback.onQueueChanged(shuffled);
+            } catch (Exception error) {
+                android.util.Log.w("NebulaQueue", "Cannot read actual shuffle order", error);
+                retryShuffleQueue(currentController, request);
+            }
+        }, ContextCompat.getMainExecutor(appContext));
+    }
+
+    /** Keep the previous full list visible during transient session updates. */
+    private void retryShuffleQueue(MediaController source, int request) {
+        if (source != controller || request != queueRequestGeneration
+                || !source.getShuffleModeEnabled() || shuffleQueueRetries >= 4) return;
+        shuffleQueueRetries++;
+        mainHandler.postDelayed(() -> {
+            if (source == controller && request == queueRequestGeneration
+                    && source.getShuffleModeEnabled()) publishQueue();
+        }, 180L);
     }
 
     private QueueEntry toQueueEntry(int index, boolean current) {
@@ -494,6 +594,7 @@ public class PlayerController implements SharedPreferences.OnSharedPreferenceCha
     }
 
     public void release() {
+        queueRequestGeneration++;
         cancelRadioTimeout();
         audioPrefs.unregisterOnSharedPreferenceChangeListener(this);
         mainHandler.removeCallbacksAndMessages(null);

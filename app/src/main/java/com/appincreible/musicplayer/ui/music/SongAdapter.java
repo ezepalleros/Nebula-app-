@@ -3,11 +3,13 @@ package com.appincreible.musicplayer.ui.music;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
@@ -20,6 +22,10 @@ import com.appincreible.musicplayer.themes.AppPreferences;
 import com.appincreible.musicplayer.themes.AppTypography;
 import com.appincreible.musicplayer.themes.UiPalette;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -153,6 +159,7 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.SongViewHolder> {
 
     @Override
     public void onViewRecycled(@NonNull SongViewHolder holder) {
+        holder.resetArtworkTracking();
         Glide.with(holder.binding.artwork).clear(holder.binding.artwork);
         holder.binding.artwork.setImageDrawable(null);
         super.onViewRecycled(holder);
@@ -161,6 +168,13 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.SongViewHolder> {
     class SongViewHolder extends RecyclerView.ViewHolder {
         private final ItemSongBinding binding;
         private Song current;
+        private Song artworkSong;
+        private boolean artworkLoaded;
+
+        private void resetArtworkTracking() {
+            artworkSong = null;
+            artworkLoaded = false;
+        }
 
         SongViewHolder(ItemSongBinding binding) {
             super(binding.getRoot());
@@ -215,18 +229,40 @@ public class SongAdapter extends ListAdapter<Song, SongAdapter.SongViewHolder> {
             binding.moreButton.setVisibility((selectionMode || selectionOnly) ? View.GONE : View.VISIBLE);
             binding.divider.setVisibility(last || active ? View.GONE : View.VISIBLE);
 
-            Glide.with(binding.artwork).clear(binding.artwork);
-            binding.artwork.setImageDrawable(null);
-            if (song.getArtworkUri().isEmpty()) {
-                binding.artwork.setImageResource(R.drawable.ic_music);
-            } else {
-                Glide.with(binding.artwork)
-                        .load(song.getArtworkUri())
-                        .placeholder(R.drawable.ic_music)
-                        .error(R.drawable.ic_music)
-                        .dontAnimate()
-                        .centerCrop()
-                        .into(binding.artwork);
+            // Avoid restarting an image that is already loaded for this exact,
+            // immutable Song object. Never carry an image across a different Song,
+            // even when both songs use the same artwork URI.
+            if (artworkSong != song || !artworkLoaded || binding.artwork.getDrawable() == null) {
+                artworkSong = song;
+                artworkLoaded = false;
+                Glide.with(binding.artwork).clear(binding.artwork);
+                binding.artwork.setImageDrawable(null);
+                if (song.getArtworkUri().isEmpty()) {
+                    binding.artwork.setImageResource(R.drawable.ic_music);
+                    artworkLoaded = true;
+                } else {
+                    Glide.with(binding.artwork)
+                            .load(song.getArtworkUri())
+                            .placeholder(R.drawable.ic_music)
+                            .error(R.drawable.ic_music)
+                            .dontAnimate()
+                            .centerCrop()
+                            .listener(new RequestListener<Drawable>() {
+                                @Override public boolean onLoadFailed(@Nullable GlideException e,
+                                        Object model, @NonNull Target<Drawable> target,
+                                        boolean isFirstResource) {
+                                    return false; // Preserve Glide's original error drawable and retry behavior.
+                                }
+
+                                @Override public boolean onResourceReady(@NonNull Drawable resource,
+                                        Object model, @NonNull Target<Drawable> target,
+                                        @NonNull DataSource dataSource, boolean isFirstResource) {
+                                    if (artworkSong == song) artworkLoaded = true;
+                                    return false; // Glide still assigns the drawable normally.
+                                }
+                            })
+                            .into(binding.artwork);
+                }
             }
         }
     }

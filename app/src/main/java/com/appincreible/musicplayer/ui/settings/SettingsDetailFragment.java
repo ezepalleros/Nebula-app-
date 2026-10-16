@@ -121,6 +121,22 @@ public class SettingsDetailFragment extends Fragment {
         }
 
         binding.styleRow.setOnClickListener(v -> showStylePicker());
+        binding.queuePresentationRow.setOnClickListener(v -> {
+            String[] choices = {"Botón", "Lista"};
+            int selected = AppPreferences.PLAYER_QUEUE_LIST.equals(
+                    AppPreferences.getPlayerQueuePresentation(requireContext())) ? 1 : 0;
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Cola en el reproductor")
+                    .setSingleChoiceItems(choices, selected, (dialog, which) -> {
+                        String mode = which == 1 ? AppPreferences.PLAYER_QUEUE_LIST
+                                : AppPreferences.PLAYER_QUEUE_BUTTON;
+                        AppPreferences.prefs(requireContext()).edit()
+                                .putString(AppPreferences.KEY_PLAYER_QUEUE_PRESENTATION, mode).apply();
+                        binding.queuePresentationValue.setText(which == 1 ? "Lista" : "Botón");
+                        dialog.dismiss();
+                    })
+                    .setNegativeButton("Cancelar", null).show();
+        });
         binding.neonSkinColorRow.setOnClickListener(v ->
                 NeonColorSettingsController.show(this, this::refreshSummary));
         binding.equalizerSkinBackgroundRow.setOnClickListener(v -> {
@@ -227,6 +243,7 @@ public class SettingsDetailFragment extends Fragment {
         bindPlayerVisibilitySwitch(binding.showPlayerAlbumSwitch, prefs, AppPreferences.KEY_SHOW_PLAYER_ALBUM);
         bindPlayerVisibilitySwitch(binding.showPlayerShuffleSwitch, prefs, AppPreferences.KEY_SHOW_PLAYER_SHUFFLE);
         bindPlayerVisibilitySwitch(binding.showPlayerQueueSwitch, prefs, AppPreferences.KEY_SHOW_PLAYER_QUEUE);
+        bindPlayerVisibilitySwitch(binding.showPlayerCastSwitch, prefs, AppPreferences.KEY_SHOW_PLAYER_CAST);
         bindPlayerVisibilitySwitch(binding.showPlayerRepeatSwitch, prefs, AppPreferences.KEY_SHOW_PLAYER_REPEAT);
         bindPlayerVisibilitySwitch(binding.showPlayerModeTextSwitch, prefs, AppPreferences.KEY_SHOW_PLAYER_MODE_TEXT);
 
@@ -605,6 +622,9 @@ public class SettingsDetailFragment extends Fragment {
         binding.showPlayerAlbumSwitch.setChecked(AppPreferences.showPlayerAlbum(requireContext()));
         binding.showPlayerShuffleSwitch.setChecked(AppPreferences.showPlayerShuffle(requireContext()));
         binding.showPlayerQueueSwitch.setChecked(AppPreferences.showPlayerQueue(requireContext()));
+        binding.showPlayerCastSwitch.setChecked(AppPreferences.showPlayerCast(requireContext()));
+        binding.queuePresentationValue.setText(AppPreferences.PLAYER_QUEUE_LIST.equals(
+                AppPreferences.getPlayerQueuePresentation(requireContext())) ? "Lista" : "Botón");
         binding.showPlayerRepeatSwitch.setChecked(AppPreferences.showPlayerRepeat(requireContext()));
         binding.showPlayerModeTextSwitch.setChecked(AppPreferences.showPlayerModeText(requireContext()));
         binding.hideWhatsAppAudioSwitch.setChecked(AppPreferences.hideWhatsAppAudio(requireContext()));
@@ -711,6 +731,12 @@ public class SettingsDetailFragment extends Fragment {
         binding.progressStyleRow.setEnabled(progressVisible);
         binding.progressStyleRow.setAlpha(progressVisible ? 1f : 0.52f);
         binding.playerAppearancePreview.applyPreferences();
+        boolean canShowQueueFormat = AppPreferences.showPlayerQueue(requireContext());
+        boolean nativeQueueFormat = canShowQueueFormat
+                && !AppPreferences.STYLE_PHONE_2D.equals(style)
+                && !AppPreferences.STYLE_XP_2D.equals(style);
+        binding.queuePresentationRow.setEnabled(nativeQueueFormat);
+        binding.queuePresentationRow.setAlpha(nativeQueueFormat ? 1f : .48f);
         if (SettingsFragment.CATEGORY_PLAYER.equals(category)) updateXpVisibilityOptions(style);
 
         binding.accentPreview.setBackgroundTintList(ColorStateList.valueOf(accent));
@@ -825,7 +851,7 @@ public class SettingsDetailFragment extends Fragment {
         com.google.android.material.materialswitch.MaterialSwitch[] unsupported = {
                 binding.showPlayerBackSwitch, binding.showPlayerHeaderLabelSwitch,
                 binding.showPlayerMusicButtonSwitch, binding.showPlayerAlbumSwitch,
-                binding.showPlayerModeTextSwitch
+                binding.showPlayerModeTextSwitch, binding.showPlayerCastSwitch
         };
         for (com.google.android.material.materialswitch.MaterialSwitch sw : unsupported) {
             sw.setEnabled(!xp);

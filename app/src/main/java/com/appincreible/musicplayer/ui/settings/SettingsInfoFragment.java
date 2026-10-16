@@ -10,6 +10,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -65,6 +67,7 @@ public class SettingsInfoFragment extends Fragment implements ListAppearance.Lis
         binding.donationCvuValue.setText(DONATION_CVU);
         binding.donationNameValue.setText(DONATION_NAME);
 
+        binding.technologiesCard.setOnClickListener(v -> showRecognitions());
         binding.githubCard.setOnClickListener(v -> openUrl(REPOSITORY_URL));
         binding.updateCard.setOnClickListener(v -> {
             if (latestReleaseUrl != null && latestVersion != null
@@ -79,6 +82,26 @@ public class SettingsInfoFragment extends Fragment implements ListAppearance.Lis
 
         applyAppearance();
         checkForUpdates(false);
+    }
+
+    private void showRecognitions() {
+        if (!isAdded()) return;
+        ScrollView scroll = new ScrollView(requireContext());
+        scroll.setFillViewport(false);
+        LinearLayout content = new LinearLayout(requireContext());
+        content.setOrientation(LinearLayout.VERTICAL);
+        int padding = Math.round(16 * getResources().getDisplayMetrics().density);
+        content.setPadding(padding, padding, padding, padding);
+        scroll.addView(content, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        InfoTechnologiesController controller = new InfoTechnologiesController(content, this::openUrl);
+        controller.applyAppearance(ListAppearance.resolve(requireContext()));
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Reconocimientos")
+                .setView(scroll)
+                .setPositiveButton("Cerrar", null)
+                .show();
     }
 
     private void checkForUpdates(boolean userInitiated) {
@@ -230,10 +253,11 @@ public class SettingsInfoFragment extends Fragment implements ListAppearance.Lis
         binding.infoTitle.setTextColor(appearance.primaryText);
         binding.infoSubtitle.setTextColor(appearance.secondaryText);
         binding.infoBackButton.setColorFilter(appearance.primaryText);
+        binding.recognitionsArrow.setTextColor(appearance.primaryText);
 
         MaterialCardView[] cards = new MaterialCardView[]{
                 binding.versionCard, binding.updateCard, binding.developerCard,
-                binding.githubCard, binding.donationCard
+                binding.githubCard, binding.technologiesCard, binding.donationCard
         };
         for (MaterialCardView card : cards) card.setCardBackgroundColor(appearance.containerColor);
 
@@ -242,6 +266,7 @@ public class SettingsInfoFragment extends Fragment implements ListAppearance.Lis
                 binding.updateLabel, binding.updateStatus,
                 binding.developerLabel, binding.developerValue,
                 binding.githubLabel, binding.githubValue,
+                binding.recognitionsLabel, binding.recognitionsHint,
                 binding.donationLabel, binding.donationHint,
                 binding.donationAliasLabel, binding.donationAliasValue,
                 binding.donationCvuLabel, binding.donationCvuValue,
