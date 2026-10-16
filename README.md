@@ -7,7 +7,7 @@
 ### Tu música. Tu reproductor. Tus reglas.
 
 Un reproductor de música para Android pensado para escuchar tu biblioteca local **sin cuentas, sin suscripciones y sin depender de internet**.  
-Radio online, skins, visualizadores, colores, playlists, juegos y una cantidad poco razonable de opciones de personalización.
+Radio online, letras sincronizadas, skins, visualizadores, playlists, juegos y muchas opciones de personalización.
 
 [![Latest Release](https://img.shields.io/github/v/release/ezepalleros/Nebula-app-?style=for-the-badge&logo=github&label=Descargar&color=7c4dff)](https://github.com/ezepalleros/Nebula-app-/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](#requisitos)
@@ -24,20 +24,20 @@ Radio online, skins, visualizadores, colores, playlists, juegos y una cantidad p
 
 Nebula nació porque quería un reproductor que pudiera adaptar a mi gusto en vez de adaptarme yo al reproductor.
 
-La música local es la protagonista: la app lee tu biblioteca desde Android, funciona offline y mantiene la reproducción en segundo plano. La única parte que necesita conexión es la radio y, cuando corresponda, funciones opcionales que consulten contenido online.
+La música local es la protagonista: la app lee tu biblioteca desde Android, funciona sin conexión y mantiene la reproducción en segundo plano. La radio y las búsquedas opcionales de letras y portadas sí necesitan internet.
 
 <table>
 <tr>
-<td width="50%"><b>🎵 Biblioteca local</b><br>Escuchá la música guardada en tu dispositivo, con portadas, favoritos, playlists, filtros de carpetas y control sobre qué contenido aparece.</td>
-<td width="50%"><b>🎨 Un reproductor realmente personalizable</b><br>Skins 2D y 3D, visualizadores, formas de portada, tipografías, fondos, degradados, colores dinámicos y elementos de la pantalla que podés mostrar u ocultar.</td>
+<td width="50%"><b>🎵 Biblioteca local</b><br>Canciones, álbumes, artistas, favoritos, playlists, carpetas configurables y edición de metadatos.</td>
+<td width="50%"><b>🎨 Personalización</b><br>Skins 2D y 3D, visualizadores, fondos, colores, tipografías, animaciones y elementos visibles.</td>
 </tr>
 <tr>
-<td><b>🔥 Reproducción cuidada</b><br>Crossfade, gapless, normalización de volumen, historial de aleatorio, controles externos y cola de reproducción.</td>
-<td><b>📻 Radio integrada</b><br>Emisoras online, búsqueda y favoritos sin mezclar la lógica de la radio con tu biblioteca local.</td>
+<td><b>🎤 Letras</b><br>Visor integrado, letras LRC sincronizadas, karaoke, edición, búsqueda con LRCLIB y ajuste manual del tiempo.</td>
+<td><b>📻 Radio Argentina</b><br>Emisoras online, búsqueda y favoritos, con reproducción en segundo plano.</td>
 </tr>
 <tr>
-<td><b>🔋 Pensada para el teléfono</b><br>Modo súper ahorro y reducción de efectos costosos cuando no hacen falta.</td>
-<td><b>🎮 Porque escuchar música no era suficiente</b><br>Incluye juegos como <i>Adivina la canción</i> y <i>El intruso</i> usando tu propia biblioteca.</td>
+<td><b>🔋 Reproducción y ahorro</b><br>Crossfade, gapless, normalización, controles externos y modo súper ahorro.</td>
+<td><b>🎮 Minijuegos</b><br>Adivina la canción, El intruso y Mezcla doble, usando tu biblioteca.</td>
 </tr>
 </table>
 
@@ -45,37 +45,40 @@ La música local es la protagonista: la app lee tu biblioteca desde Android, fun
 
 ## 🎧 Reproduciendo
 
-La pantalla de reproducción puede ser sobria, llamativa o directamente innecesariamente personalizada.
+Elegí entre el reproductor clásico, skins 3D y estilos inmersivos como **Reproductor XP** y **Teléfono clásico**. También hay visualizadores como **Anillo** y **Ecualizador 2D**.
 
 <table>
 <tr>
-<td align="center" width="33%">
-<img src="assets/readme/now-playing.jpg" width="250" alt="Pantalla Reproduciendo de Nebula"><br>
-<b>Reproductor clásico</b>
-</td>
-<td align="center" width="33%">
-<img src="assets/readme/skin-3d.jpg" width="250" alt="Skin 3D de Nebula"><br>
-<b>Skins 3D</b>
-</td>
-<td align="center" width="33%">
-<img src="assets/readme/visualizer-ring.jpg" width="250" alt="Visualizador Anillo de Nebula"><br>
-<b>Visualizadores</b>
-</td>
+<td width="33%" align="center"><img src="assets/readme/now-playing.jpg" width="250" alt="Reproduciendo con portada y controles"></td>
+<td width="33%" align="center"><img src="assets/readme/skin-3d.jpg" width="250" alt="Skin tridimensional del reproductor"></td>
+<td width="33%" align="center"><img src="assets/readme/skin-xp.jpg" width="250" alt="Skin Reproductor XP con letras"></td>
 </tr>
 </table>
 
-### Lo que podés cambiar
+### Lo que podés personalizar
 
-- Skins 2D y 3D.
-- Visualizadores reactivos como **Anillo** y **Ecualizador 2D**.
-- Portada cuadrada, redondeada o circular.
-- Fondos sólidos, degradados, multicolor o derivados de la portada.
-- Colores del reproductor y del mini reproductor.
-- Tipografía y animaciones.
-- Estilos de barra de progreso, incluso con emoji personalizado.
-- Elementos visibles de la pantalla de reproducción.
-- Cola integrada debajo de los controles.
-- Gestos sobre la portada para cambiar de canción.
+- Skins, temas y efectos visuales; algunos estilos incluyen sus propios ajustes.
+- Portadas, tipografías, colores, degradados y fondos dinámicos.
+- Estilos de barra de progreso y animaciones, incluida la opción de dejarlas quietas.
+- Elementos visibles, botones del reproductor y gestos sobre la portada.
+- Cola de reproducción como **botón o lista**, según tu preferencia.
+- Visualización de barras de audio en los skins compatibles.
+
+---
+
+## 🎤 Letras sincronizadas
+
+Consultá las letras desde la pantalla de reproducción, sin cambiar de aplicación.
+
+- Letras incrustadas en los archivos de música y archivos LRC.
+- Búsqueda individual o masiva con **LRCLIB**, con selección manual de resultados.
+- Letras completas con resaltado o modo karaoke.
+- Importar, exportar y editar letras por línea.
+- **Sincronizar**: ajustar un desfase por canción sin sobrescribir el archivo original.
+- Tamaño, tipografía, colores, fondo y pantalla completa configurables.
+- Opción de no abrir Letras al tocar la portada.
+
+La reproducción de música local y las letras ya guardadas siguen disponibles sin conexión.
 
 ---
 
@@ -83,29 +86,29 @@ La pantalla de reproducción puede ser sobria, llamativa o directamente innecesa
 
 <table>
 <tr>
-<td width="48%" align="center">
-<img src="assets/readme/library.jpg" width="300" alt="Biblioteca musical de Nebula">
-</td>
+<td width="48%" align="center"><img src="assets/readme/library.jpg" width="300" alt="Biblioteca de música local"></td>
 <td width="52%">
 
 ### Música local primero
 
-Nebula trabaja con la biblioteca de Android mediante MediaStore.
+Nebula utiliza la biblioteca de Android mediante MediaStore.
 
-- Canciones, álbumes, artistas y agrupaciones.
-- Favoritos.
-- Playlists propias.
-- Orden y aleatorio configurables.
-- Ocultar carpetas completas de la biblioteca.
-- Opción para ocultar audios de WhatsApp.
-- Mini reproductor persistente.
-- Editor de metadatos.
+- Canciones, álbumes, artistas y playlists.
+- Favoritos, filtros y orden configurable.
+- Ocultar carpetas y audios que no quieras ver.
+- Mini reproductor para controlar la música desde otras pantallas.
+- Editor de título, artista, álbum y portada.
+- Opción de escribir cambios de metadatos en archivos compatibles, con manejo de permisos y respaldo.
 
-Tu música sigue siendo tuya: no hace falta iniciar sesión para escucharla.
+No necesitás registrarte para escuchar tus canciones.
 
 </td>
 </tr>
 </table>
+
+### Portadas online
+
+Desde el editor podés buscar portadas en **Deezer** y **iTunes** sin claves de API. La búsqueda es manual y ofrece candidatos para elegir, además de ajustes de calidad y opción de usar solo Wi-Fi. La portada elegida se aplica al guardar la canción.
 
 ---
 
@@ -115,20 +118,17 @@ Tu música sigue siendo tuya: no hace falta iniciar sesión para escucharla.
 <tr>
 <td width="52%">
 
-Radio online integrada dentro de Nebula, pero separada de la reproducción de canciones locales.
+Radio online integrada en Nebula, independiente de la biblioteca local.
 
-- Búsqueda de emisoras.
-- Favoritos de radio.
-- Controles desde notificación, Bluetooth y pantalla de bloqueo.
-- Reproducción en segundo plano.
-- Contador de emisoras opcional.
+- Búsqueda de emisoras argentinas.
+- Emisoras favoritas y navegación entre favoritas.
+- Controles de reproducción en segundo plano.
+- Opciones de personalización de la pantalla de radio.
 
-> La biblioteca local funciona offline. La radio, naturalmente, necesita conexión a internet.
+> La radio requiere internet; la biblioteca musical local no.
 
 </td>
-<td width="48%" align="center">
-<img src="assets/readme/radio.jpg" width="300" alt="Radio de Nebula">
-</td>
+<td width="48%" align="center"><img src="assets/readme/radio.jpg" width="300" alt="Emisoras de Radio Argentina"></td>
 </tr>
 </table>
 
@@ -136,54 +136,38 @@ Radio online integrada dentro de Nebula, pero separada de la reproducción de ca
 
 ## 🎨 Personalización
 
-Si una opción visual se puede convertir en un ajuste, probablemente Nebula ya lo intentó.
-
 <table>
 <tr>
-<td align="center" width="50%">
-<img src="assets/readme/player-customization.jpg" width="300" alt="Personalización del reproductor"><br>
-<b>Skins, fondos y colores</b>
-</td>
-<td align="center" width="50%">
-<img src="assets/readme/player-elements.jpg" width="300" alt="Elementos visibles del reproductor"><br>
-<b>Elegí qué querés ver</b>
-</td>
+<td width="50%" align="center"><img src="assets/readme/player-customization.jpg" width="300" alt="Opciones de personalización del reproductor"></td>
+<td width="50%" align="center"><img src="assets/readme/player-elements.jpg" width="300" alt="Configuración de elementos visibles"></td>
 </tr>
 </table>
 
-La configuración está dividida por categorías para que no sea necesario sobrevivir a una pantalla infinita de switches:
-
-**Apariencia · Navegación · Reproductor · Audio · Radio · Biblioteca · Batería · Información**
+Organizá la app a tu manera desde **Apariencia, Navegación, Reproductor, Letras, Audio, Radio, Biblioteca y Batería**. En **Información** podés comprobar actualizaciones y consultar los reconocimientos a servicios y bibliotecas utilizadas.
 
 ---
 
-## 🎮 Adivina la canción
+## 🎮 Juegos
 
 <div align="center">
-<img src="assets/readme/guess-song.jpg" width="320" alt="Juego Adivina la canción de Nebula">
+<img src="assets/readme/guess-song.jpg" width="320" alt="Pantalla de Juegos con tres minijuegos musicales">
 </div>
 
-Nebula también usa tu biblioteca para pequeños juegos musicales. En **Adivina la canción** escuchás fragmentos y tratás de reconocer el tema antes de necesitar más tiempo.
-
-Todo ocurre con la música que ya tenés en el dispositivo.
+Usá tus canciones para jugar **Adivina la canción**, **El intruso** y **Mezcla doble**. Los juegos funcionan con la biblioteca que ya tenés descargada y pueden ocultarse desde las opciones de la app.
 
 ---
 
 ## 🔊 Audio y reproducción
 
-Nebula usa **Media3 / ExoPlayer** y un motor de reproducción con dos players para gestionar transiciones.
+Nebula utiliza **AndroidX Media3 / ExoPlayer** y un motor con dos reproductores para gestionar las transiciones de audio.
 
-Entre las opciones disponibles:
-
-- Crossfade configurable.
-- Gapless.
-- Fade opcional al pausar/reanudar.
+- Crossfade y gapless configurables.
+- Fade opcional al pausar o reanudar.
 - Normalización de volumen.
-- Aleatorio con historial real: `Anterior` vuelve por lo que efectivamente escuchaste.
-- Repetir canción / lista.
-- Cola de reproducción con acceso directo a cualquier canción.
-- Controles desde notificación, Bluetooth y pantalla de bloqueo.
-- Opción tipo Samsung Music para el comportamiento del botón `Anterior`.
+- Aleatorio, repetición y cola de reproducción.
+- Comportamiento configurable del botón **Anterior**.
+- Controles desde notificaciones, auriculares, Bluetooth y pantalla de bloqueo.
+- Modo súper ahorro para reducir los efectos visuales y otras tareas costosas.
 
 ---
 
@@ -191,36 +175,34 @@ Entre las opciones disponibles:
 
 1. Entrá en **[Releases](https://github.com/ezepalleros/Nebula-app-/releases/latest)**.
 2. Descargá el APK de la última versión.
-3. Abrilo en tu teléfono.
-4. Si Android lo solicita, permití la instalación desde esa fuente.
-5. Al abrir Nebula por primera vez, concedé acceso a tu música y a las notificaciones.
+3. Abrilo en tu teléfono y, si Android lo solicita, autorizá la instalación desde esa fuente.
+4. Al abrir Nebula, concedé los permisos necesarios para acceder a tu música y mostrar notificaciones.
 
 ### Requisitos
 
 - **Android 8.0 (API 26) o superior**.
 - Permiso para acceder a archivos de audio.
-- Permiso de notificaciones en versiones de Android que lo requieren.
-- Internet únicamente para radio y funciones online opcionales.
+- Permiso de notificaciones en las versiones de Android que lo requieren.
+- Internet únicamente para la radio, las actualizaciones y las funciones online opcionales.
 
 ---
 
 ## 🛠️ Tecnología
 
-Nebula está hecha de forma nativa para Android.
+Nebula está desarrollada de forma nativa para Android.
 
 | Componente | Tecnología |
 |---|---|
-| Lenguaje | Java |
-| Interfaz | XML Views |
-| Audio | AndroidX Media3 / ExoPlayer |
+| Lenguaje e interfaz | Java y XML Views |
+| Reproducción | AndroidX Media3 / ExoPlayer / MediaSession |
 | Biblioteca | MediaStore |
-| Datos locales | Room |
-| Reproducción externa | MediaSession |
-| Skins especiales | Canvas / WebView / JavaScript |
-| SDK mínimo | 26 |
-| Target SDK | 35 |
+| Persistencia | Room y preferencias locales |
+| Imágenes y metadatos | Glide y jaudiotagger |
+| Servicios online | LRCLIB, Deezer, iTunes y Radio Browser |
+| Skins especiales | Canvas, WebView y JavaScript |
+| SDK mínimo / objetivo | 26 / 35 |
 
-No usa Jetpack Compose.
+No utiliza Kotlin ni Jetpack Compose.
 
 ---
 
@@ -231,19 +213,15 @@ git clone https://github.com/ezepalleros/Nebula-app-.git
 cd Nebula-app-
 ```
 
-Después abrí la carpeta del proyecto en Android Studio y sincronizá Gradle.
+Abrí la carpeta en Android Studio y sincronizá Gradle.
 
-Para generar un APK firmado de release usá:
-
-**Build → Generate Signed App Bundle or APK → APK**
+Para generar un APK firmado de release utilizá **Build → Generate Signed App Bundle or APK → APK**.
 
 ---
 
 ## 🔄 Actualizaciones
 
-Nebula puede consultar la última versión publicada en **GitHub Releases** desde la sección **Información** de la app.
-
-Si existe una versión más nueva, te lleva a la release oficial para descargarla. Android sigue mostrando sus controles normales de seguridad e instalación.
+Desde **Información**, Nebula puede comprobar la última versión publicada en GitHub Releases y abrir la página oficial de descarga.
 
 **[Ver todas las releases →](https://github.com/ezepalleros/Nebula-app-/releases)**
 
@@ -251,7 +229,7 @@ Si existe una versión más nueva, te lleva a la release oficial para descargarl
 
 ## ❤️ Apoyar el proyecto
 
-Si Nebula te sirve y querés bancar el desarrollo:
+Si Nebula te sirve y querés bancar su desarrollo:
 
 | | |
 |---|---|
@@ -265,14 +243,7 @@ No hace falta donar para usar ninguna función de Nebula.
 
 ## 🤝 Contribuir
 
-Issues, reportes de bugs e ideas son bienvenidos.
-
-Si encontrás algo roto, idealmente incluí:
-
-- modelo del teléfono
-- versión de Android
-- pasos para reproducir el problema
-- captura o video si es un bug visual
+Issues, reportes de bugs e ideas son bienvenidos. Si encontrás un problema, incluí el modelo de teléfono, la versión de Android, los pasos para reproducirlo y, cuando sea posible, una captura o video.
 
 **[Abrir un issue](https://github.com/ezepalleros/Nebula-app-/issues/new)**
 
@@ -282,7 +253,7 @@ Si encontrás algo roto, idealmente incluí:
 
 **Desarrollado por [elequiweb](https://github.com/ezepalleros).**
 
-Nebula es un proyecto independiente para Android.
+Nebula es un proyecto independiente para Android. Las herramientas, bibliotecas y servicios externos se reconocen en la sección **Información → Reconocimientos** de la app.
 
 <div align="center">
 
